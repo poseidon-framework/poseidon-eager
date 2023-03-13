@@ -154,7 +154,6 @@ function infer_library_udg() {
 
   value=($(echo ${1} | cut --output-delimiter ' ' -d ';' -f 1- ))
   let index=${2}
-  result
 
   if [[ ${#value[@]} == '1' ]]; then
       if [[ ${value[0]} == 'mixed' ]]; then
@@ -222,9 +221,35 @@ function infer_library_strandedness() {
 }
 
 ## Function to create R1 and R2 columns from ena_table fastq_fn entries
-#   usage: r1_r2_from_ena_fastq ${path_to_ena_data} ${fastq_fn}
+#   usage: r1_r2_from_ena_fastq <prefix> <fastq_ftp>
 #   Returns: a thrupple of: seq_type R1 R2
 function r1_r2_from_ena_fastq() {
+  local prefix
+  local value
+  local r1
+  local r2
+  local seq_type
+
+  prefix="${1}"
+  value="${2}"
+  r1="${prefix}$(pull_by_index ';' ${value} 0)"
+  r2="${prefix}$(pull_by_index ';' ${value} 1)"
+  seq_type="PE"
+
+  ## If no R2, then SE
+  if [[ "${r2}" == "${prefix}" ]]; then
+    r2="NA"
+    seq_type="SE"
+  fi
+
+  echo "${seq_type} ${r1} ${r2}"
+}
+
+
+## Function to create R1 and R2 columns from ena_table fastq_fn entries
+#   usage: r1_r2_from_ena_fastq ${path_to_ena_data} ${fastq_fn}
+#   Returns: a thrupple of: seq_type R1 R2
+function local_r1_r2_from_ena_fastq() {
   local data_path
   local value
   local r1

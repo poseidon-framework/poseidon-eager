@@ -137,10 +137,10 @@ while read line; do
   read -r seq_type r1 r2 < <(r1_r2_from_ena_fastq ${ena_fastq_prefix} ${fastq_fn})
 
   ## One set of sequencing data can correspond to multiple poseidon_ids
-  for index in for i in $(seq 1 1 $(number_of_entries ';' ${poseidon_id})); do
+  for index in $(seq 1 1 $(number_of_entries ';' ${poseidon_id})); do
     row_pid=$(pull_by_index ';' ${poseidon_id} "${index}-1")
     row_lib_id="${row_pid}_${lib_name}" ## paste poseidon ID with Library ID to ensure unique naming of library results
-    echo -e "${row_pid}\t${lib_name}\t${lane}\t${colour_chemistry}\t${seq_type}\t${organism}\t${library_built}\t${udg_treatment}\t${r1}\t${r2}\tNA" >> ${out_file}
+    echo -e "${row_pid}\t${row_lib_id}\t${lane}\t${colour_chemistry}\t${seq_type}\t${organism}\t${library_built}\t${udg_treatment}\t${r1}\t${r2}\tNA" >> ${out_file}
     
     ## Keep track of observed values
     poseidon_ids+=(${row_pid})

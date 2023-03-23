@@ -1,7 +1,7 @@
 name: Create additional PR files
 on:
   issue_comment:
-    types: [created]
+    types: [created, edited]
 
 jobs:
   deploy:

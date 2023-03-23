@@ -31,39 +31,43 @@ jobs:
         run: |
           offending_ssfs=''
           package_names=''
+          comment_and_stop="false"
 
           while read r; do
             package_name="$(basename -s .ssf ${r})"
             package_dir="$(basename $(dirname ${r}))"
             if [[ ${package_name} != ${package_dir} ]]; then
               offending_ssfs+="${r} "
+              comment_and_stop="true"
             fi
             package_names+="${package_name} "
-          done < <( gh api /repos/poseidon-framework/poseidon-eager/pulls/${{ github.event.issue.number }}/files -q '.[].filename' | grep '.ssf$' )
+          done < <( gh api /repos/poseidon-framework/poseidon-eager/pulls/1/files -q '.[].filename' | grep '.ssf$' )
 
-          echo "offending_ssfs='${offending_ssfs% }'" >>$GITHUB_OUTPUT
-          echo "package_names='${package_names% }'" >>$GITHUB_OUTPUT
+          echo "comment_and_stop=${comment_and_stop}" >>$GITHUB_OUTPUT
+          echo "offending_ssfs=${offending_ssfs% }" >>$GITHUB_OUTPUT
+          echo "package_names=${package_names% }" >>$GITHUB_OUTPUT
         env:
           GITHUB_TOKEN: ${{ secrets.delphis_bot_auth_token }}
         
       - name: Post comment listing offending packages
-        if: steps.get_package_names.outputs.offending_ssfs != ''
+        if: steps.get_package_names.outputs.comment_and_stop == "true"
         uses: peter-evans/create-or-update-comment@v2
         with:
           issue-number: ${{ github.event.issue.number }}
+          token: ${{ secrets.delphis_bot_auth_token }}
           body: |
             SSF files MUST be named after their respective package. The following SSF files break this rule:
               ${{ steps.get_package_names.outputs.offending_ssfs }}
 
       - name: Create eager TSV from SSF
-        if: steps.get_package_names.outputs.offending_ssfs == ''
+        if: steps.get_package_names.outputs.comment_and_stop == "false"
         run: |
           for package_name in ${{ steps.get_package_names.outputs.package_names }}; do
             ./scripts/create_eager_input.sh ${package_name}
           done
 
       - name: Commit & push changes
-        if: steps.prettier_status.outputs.result == 'fail'
+        if: steps.get_package_names.outputs.comment_and_stop == "false"
         run: |
           git config user.email "delphis-bot@poseidon-adna.org"
           git config user.name "delphis-bot"

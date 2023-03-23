@@ -51,6 +51,7 @@ jobs:
         uses: peter-evans/create-or-update-comment@v2
         with:
           issue-number: ${{ github.event.issue.number }}
+          token: ${{ secrets.delphis_bot_auth_token }}
           body: |
             SSF files MUST be named after their respective package. The following SSF files break this rule:
               ${{ steps.get_package_names.outputs.offending_ssfs }}

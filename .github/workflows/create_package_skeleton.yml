@@ -41,8 +41,8 @@ jobs:
             package_names+="${package_name} "
           done < <( gh api /repos/poseidon-framework/poseidon-eager/pulls/${{ github.event.issue.number }}/files -q '.[].filename' | grep '.ssf$' )
 
-          echo "offending_ssfs='${offending_ssfs% }'" >>$GITHUB_OUTPUT
-          echo "package_names='${package_names% }'" >>$GITHUB_OUTPUT
+          echo "offending_ssfs=${offending_ssfs% }" >>$GITHUB_OUTPUT
+          echo "package_names=${package_names% }" >>$GITHUB_OUTPUT
         env:
           GITHUB_TOKEN: ${{ secrets.delphis_bot_auth_token }}
         

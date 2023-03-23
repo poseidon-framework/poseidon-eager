@@ -65,7 +65,7 @@ jobs:
           done
 
       - name: Commit & push changes
-        needs: [ create_tsv ]
+        if: steps.create_tsv.outcome == 'success'
         run: |
           git config user.email "delphis-bot@poseidon-adna.org"
           git config user.name "delphis-bot"

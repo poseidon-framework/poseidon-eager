@@ -64,7 +64,7 @@ jobs:
           done
 
       - name: Commit & push changes
-        if: steps.prettier_status.outputs.result == 'fail'
+        if: steps.get_package_names.outputs.offending_ssfs == ''
         run: |
           git config user.email "delphis-bot@poseidon-adna.org"
           git config user.name "delphis-bot"

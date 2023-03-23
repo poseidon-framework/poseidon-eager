@@ -57,6 +57,7 @@ jobs:
               ${{ steps.get_package_names.outputs.offending_ssfs }}
 
       - name: Create eager TSV from SSF
+        id: create_tsv
         if: steps.get_package_names.outputs.offending_ssfs == ''
         run: |
           for package_name in ${{ steps.get_package_names.outputs.package_names }}; do
@@ -64,7 +65,7 @@ jobs:
           done
 
       - name: Commit & push changes
-        if: steps.get_package_names.outputs.offending_ssfs == ''
+        needs: [ create_tsv ]
         run: |
           git config user.email "delphis-bot@poseidon-adna.org"
           git config user.name "delphis-bot"

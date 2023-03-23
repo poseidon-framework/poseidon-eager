@@ -39,10 +39,10 @@ jobs:
               offending_ssfs+="${r} "
             fi
             package_names+="${package_name} "
-          done < <( gh api /repos/poseidon-framework/poseidon-eager/pulls/${{ github.event.issue.number }}/files -q '.[].filename' | grep '.ssf$' )
+          done < <( gh api /repos/poseidon-framework/poseidon-eager/pulls/1/files -q '.[].filename' | grep '.ssf$' )
 
-          echo "offending_ssfs='${offending_ssfs% }'" >>$GITHUB_OUTPUT
-          echo "package_names='${package_names% }'" >>$GITHUB_OUTPUT
+          echo "offending_ssfs=${offending_ssfs% }" >>$GITHUB_OUTPUT
+          echo "package_names=${package_names% }" >>$GITHUB_OUTPUT
         env:
           GITHUB_TOKEN: ${{ secrets.delphis_bot_auth_token }}
         
@@ -51,6 +51,7 @@ jobs:
         uses: peter-evans/create-or-update-comment@v2
         with:
           issue-number: ${{ github.event.issue.number }}
+          token: ${{ secrets.delphis_bot_auth_token }}
           body: |
             SSF files MUST be named after their respective package. The following SSF files break this rule:
               ${{ steps.get_package_names.outputs.offending_ssfs }}
@@ -58,12 +59,12 @@ jobs:
       - name: Create eager TSV from SSF
         if: steps.get_package_names.outputs.offending_ssfs == ''
         run: |
-          for package_name in ${{ steps.get_package_names.outputs.package_names }}; do
-            ./scripts/create_eager_input.sh ${package_name}
-          done
+        for package_name in ${{ steps.get_package_names.outputs.package_names }}; do
+          ./scripts/create_eager_input.sh ${package_name}
+        done
 
       - name: Commit & push changes
-        if: steps.prettier_status.outputs.result == 'fail'
+        if: steps.get_package_names.outputs.offending_ssfs == ''
         run: |
           git config user.email "delphis-bot@poseidon-adna.org"
           git config user.name "delphis-bot"

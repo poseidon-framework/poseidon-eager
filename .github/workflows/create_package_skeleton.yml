@@ -39,7 +39,7 @@ jobs:
               offending_ssfs+="${r} "
             fi
             package_names+="${package_name} "
-          done < <( gh api /repos/poseidon-framework/poseidon-eager/pulls/1/files -q '.[].filename' | grep '.ssf$' )
+          done < <( gh api /repos/poseidon-framework/poseidon-eager/pulls/${{ github.event.issue.number }}/files -q '.[].filename' | grep '.ssf$' )
 
           echo "offending_ssfs='${offending_ssfs% }'" >>$GITHUB_OUTPUT
           echo "package_names='${package_names% }'" >>$GITHUB_OUTPUT
@@ -58,9 +58,9 @@ jobs:
       - name: Create eager TSV from SSF
         if: steps.get_package_names.outputs.offending_ssfs == ''
         run: |
-        for package_name in ${{ steps.get_package_names.outputs.package_names }}; do
-          ./scripts/create_eager_input.sh ${package_name}
-        done
+          for package_name in ${{ steps.get_package_names.outputs.package_names }}; do
+            ./scripts/create_eager_input.sh ${package_name}
+          done
 
       - name: Commit & push changes
         if: steps.prettier_status.outputs.result == 'fail'

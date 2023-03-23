@@ -12,6 +12,15 @@ jobs:
       github.repository == 'poseidon-framework/poseidon-eager'
     runs-on: ubuntu-latest
     steps:
+
+      # indication that the process has started
+      - name: React on comment
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          comment-id: ${{ github.event.comment.id }}
+          reactions: eyes
+          token: ${{ secrets.delphis_bot_auth_token }}
+
       # Use the @delphis-bot token to check out so we can push later
       - uses: actions/checkout@v3
         with:
@@ -65,6 +74,7 @@ jobs:
           done
 
       - name: Commit & push changes
+        id: commit_changes
         if: steps.create_tsv.outcome == 'success'
         run: |
           git config user.email "delphis-bot@poseidon-adna.org"
@@ -74,3 +84,11 @@ jobs:
           git status
           git commit -m "[automated] Create processing backbone from SSF files"
           git push
+
+      # # indication that the process is done
+      # - name: React on comment
+      #   if: steps.commit_changes.outcome == 'success' || steps.commit_changes.outcome == 'failure'
+      #   uses: peter-evans/create-or-update-comment@v2
+      #   with:
+      #     comment-id: ${{ github.event.comment.id }}
+      #     reactions: eyes

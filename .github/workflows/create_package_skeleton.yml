@@ -1,7 +1,7 @@
 name: Create additional PR files
 on:
   issue_comment:
-    types: [created]
+    types: [created, edited]
 
 jobs:
   deploy:
@@ -12,6 +12,15 @@ jobs:
       github.repository == 'poseidon-framework/poseidon-eager'
     runs-on: ubuntu-latest
     steps:
+
+      # indication that the process has started
+      - name: React on comment
+        uses: peter-evans/create-or-update-comment@v2
+        with:
+          comment-id: ${{ github.event.comment.id }}
+          reactions: eyes
+          token: ${{ secrets.delphis_bot_auth_token }}
+
       # Use the @delphis-bot token to check out so we can push later
       - uses: actions/checkout@v3
         with:
@@ -43,7 +52,10 @@ jobs:
             package_names+="${package_name} "
           done < <( gh api /repos/poseidon-framework/poseidon-eager/pulls/1/files -q '.[].filename' | grep '.ssf$' )
 
+<<<<<<< HEAD
           echo "comment_and_stop=${comment_and_stop}" >>$GITHUB_OUTPUT
+=======
+>>>>>>> main
           echo "offending_ssfs=${offending_ssfs% }" >>$GITHUB_OUTPUT
           echo "package_names=${package_names% }" >>$GITHUB_OUTPUT
         env:
@@ -60,14 +72,40 @@ jobs:
               ${{ steps.get_package_names.outputs.offending_ssfs }}
 
       - name: Create eager TSV from SSF
+<<<<<<< HEAD
         if: steps.get_package_names.outputs.comment_and_stop == "false"
+=======
+        id: create_tsv
+        if: steps.get_package_names.outputs.offending_ssfs == ''
+>>>>>>> main
         run: |
           for package_name in ${{ steps.get_package_names.outputs.package_names }}; do
             ./scripts/create_eager_input.sh ${package_name}
           done
 
+      - name: Add nextflow config from template
+        id: add_config
+        if: steps.get_package_names.outputs.offending_ssfs == ''
+        run: |
+          for package_name in ${{ steps.get_package_names.outputs.package_names }}; do
+            cp ./assets/template.config ./packages/${package_name}/${package_name}.config
+          done
+
+      - name: Add tsv_patch from template
+        id: add_tsv_patch
+        if: steps.get_package_names.outputs.offending_ssfs == ''
+        run: |
+          for package_name in ${{ steps.get_package_names.outputs.package_names }}; do
+            cp ./assets/template.tsv_patch.sh ./packages/${package_name}/${package_name}.tsv_patch.sh
+          done
+
       - name: Commit & push changes
+<<<<<<< HEAD
         if: steps.get_package_names.outputs.comment_and_stop == "false"
+=======
+        id: commit_changes
+        if: steps.create_tsv.outcome == 'success'
+>>>>>>> main
         run: |
           git config user.email "delphis-bot@poseidon-adna.org"
           git config user.name "delphis-bot"
@@ -76,3 +114,11 @@ jobs:
           git status
           git commit -m "[automated] Create processing backbone from SSF files"
           git push
+
+      # # indication that the process is done
+      # - name: React on comment
+      #   if: steps.commit_changes.outcome == 'success' || steps.commit_changes.outcome == 'failure'
+      #   uses: peter-evans/create-or-update-comment@v2
+      #   with:
+      #     comment-id: ${{ github.event.comment.id }}
+      #     reactions: eyes

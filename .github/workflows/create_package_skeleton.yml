@@ -82,7 +82,7 @@ jobs:
           done
 
       - name: Add tsv_patch from template
-        id: add_config
+        id: add_tsv_patch
         if: steps.get_package_names.outputs.offending_ssfs == ''
         run: |
           for package_name in ${{ steps.get_package_names.outputs.package_names }}; do

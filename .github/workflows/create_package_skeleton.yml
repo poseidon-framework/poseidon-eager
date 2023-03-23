@@ -73,6 +73,22 @@ jobs:
             ./scripts/create_eager_input.sh ${package_name}
           done
 
+      - name: Add nextflow config from template
+        id: add_config
+        if: steps.get_package_names.outputs.offending_ssfs == ''
+        run: |
+          for package_name in ${{ steps.get_package_names.outputs.package_names }}; do
+            cp ./assets/template.config ./packages/${package_name}/${package_name}.config
+          done
+
+      - name: Add tsv_patch from template
+        id: add_config
+        if: steps.get_package_names.outputs.offending_ssfs == ''
+        run: |
+          for package_name in ${{ steps.get_package_names.outputs.package_names }}; do
+            cp ./assets/template.tsv_patch.sh ./packages/${package_name}/${package_name}.tsv_patch.sh
+          done
+
       - name: Commit & push changes
         id: commit_changes
         if: steps.create_tsv.outcome == 'success'

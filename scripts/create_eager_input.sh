@@ -52,7 +52,7 @@ fi
 package_dir="${repo_dir}/packages/${package_name}"
 ena_table="${package_dir}/${package_name}.ssf"
 tsv_patch="${package_dir}/tsv_patch.sh"
-ena_fastq_prefix='https://'
+raw_data_dummy_path='<PATH_TO_DATA>'
 
 ## Error if input ssf or directory does not exist
 if [[ ! -d ${package_dir} ]]; then
@@ -134,12 +134,12 @@ while read line; do
   library_built=$(infer_library_strandedness ${library_built_field} 0)
   udg_treatment=$(infer_library_udg ${udg_treatment_field} 0)
 
-  read -r seq_type r1 r2 < <(r1_r2_from_ena_fastq ${ena_fastq_prefix} ${fastq_fn})
-
   ## One set of sequencing data can correspond to multiple poseidon_ids
   for index in $(seq 1 1 $(number_of_entries ';' ${poseidon_id})); do
     row_pid=$(pull_by_index ';' ${poseidon_id} "${index}-1")
     row_lib_id="${row_pid}_${lib_name}" ## paste poseidon ID with Library ID to ensure unique naming of library results
+    
+    read -r seq_type r1 r2 < <(dummy_r1_r2_from_ena_fastq ${raw_data_dummy_path} ${row_lib_id}_L${lane} ${fastq_fn})
     echo -e "${row_pid}\t${row_lib_id}\t${lane}\t${colour_chemistry}\t${seq_type}\t${organism}\t${library_built}\t${udg_treatment}\t${r1}\t${r2}\tNA" >> ${out_file}
     
     ## Keep track of observed values

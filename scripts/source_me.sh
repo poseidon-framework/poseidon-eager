@@ -245,6 +245,36 @@ function r1_r2_from_ena_fastq() {
   echo "${seq_type} ${r1} ${r2}"
 }
 
+## Function to create R1 and R2 columns from ena_table fastq_fn entries
+#   usage: r1_r2_from_ena_fastq <path_prefix> <out_fn_prefix> <fastq_ftp> 
+#   Returns: a thrupple of: seq_type R1 R2
+function dummy_r1_r2_from_ena_fastq() {
+  local prefix
+  local out_fn_prefix
+  local value
+  local r1
+  local r2
+  local seq_type
+  local n_entries
+
+  prefix="${1}"
+  out_fn_prefix="${2}"
+  value="${3}"
+  n_entries=$(number_of_entries ';' ${value})
+
+  r1="${prefix}/${out_fn_prefix}_R1.fastq.gz"
+  if [[ ${n_entries} -gt 1 ]]; then
+    r2="${prefix}/${out_fn_prefix}_R2.fastq.gz"
+    seq_type="PE"
+  else
+  ## If no R2, then SE
+    r2="NA"
+    seq_type="SE"
+  fi
+
+  echo "${seq_type} ${r1} ${r2}"
+}
+
 
 ## Function to create R1 and R2 columns from ena_table fastq_fn entries
 #   usage: r1_r2_from_ena_fastq ${path_to_ena_data} ${fastq_fn}

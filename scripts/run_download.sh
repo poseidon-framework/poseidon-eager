@@ -16,4 +16,4 @@ mkdir -p $LOGDIR
 
 # Submit
 
-qsub -V -b y -j y -o $LOGDIR/download.${package_name}.out -cwd $SCRIPT -d $INDIR -o $OUTDIR 
+qsub -V -b y -j y -N ${package_name}.ENA_Download -o $LOGDIR/download.${package_name}.out -cwd $SCRIPT -d $INDIR -o $OUTDIR 

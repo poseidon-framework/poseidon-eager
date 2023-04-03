@@ -37,6 +37,7 @@ for root, dirs, files in os.walk( os.path.join(args.ssf_dir) ):
             os.makedirs(odir, exist_ok=True)
             line_count=1
             with open(source_file, 'r') as f:
+                md5_fn=open(os.path.join(odir,"expected_md5sums.txt"), 'w')
                 for ena_entry in read_ena_table(f):
                     line_count+=1
                     fastq_url = ena_entry["fastq_ftp"]
@@ -46,10 +47,14 @@ for root, dirs, files in os.walk( os.path.join(args.ssf_dir) ):
                         continue
                     fastq_filename = os.path.basename(fastq_url)
                     target_file = os.path.join(odir, fastq_filename)
+                    fastq_md5=ena_entry["fastq_md5"]
                     if os.path.isfile(target_file):
                         print(f"[download_ena_data.py]: Target file {target_file} already exists. Skipping", file=sys.stderr)
+                        print(f"{fastq_md5}  {target_file}", file=md5_fn) ## expected md5sums should always be updated even if the file has already been downloaded.
                     else:
                         print(f"[download_ena_data.py]: Downloading {fastq_url} into {target_file}", file=sys.stderr)
                         if not args.dry_run:
                             wget.download("https://" + fastq_url, out=target_file)
+                            print(f"{fastq_md5}  {target_file}", file=md5_fn)
+
 

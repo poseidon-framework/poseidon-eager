@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -euo pipefail ## Exit on any failure, pipefail, complain on new unassigned variables.
 
 ## Load helper bash functions
 source $(dirname ${0})/source_me.sh

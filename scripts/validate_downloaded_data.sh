@@ -25,8 +25,10 @@ else
   md5sum --quiet --strict --check ${md5sum_file}
   check_fail $? "${script_debug_string} md5sum validation failed!"
 fi
+errecho -y "${script_debug_string} md5sums OK!"
 
-## TODO: Parse SSF file, create symlinks with data, and run patch.sh on TSV to prepare eager input dirs
+
+errecho -y "${script_debug_string} Creating raw data symlinks: ${download_dir} -> ${symlink_dir}"
 ssf_header=($(head -n1 ${ssf_file}))
 
 let pid_col=$(get_index_of 'poseidon_IDs' "${ssf_header[@]}")+1

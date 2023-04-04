@@ -68,13 +68,13 @@ fi
 out_file="${package_dir}/${package_name}.tsv"
 
 ## This will all break down if the headers contain whitespace.
-ena_table_header=($(head -n1 ${ena_table}))
+ssf_header=($(head -n1 ${ena_table}))
 
 ## TODO Update checksum checking once decisions on raw data handling are made.
 ## Checksums
 if [[ ${skip_md5} != 'TRUE' ]]; then
   errecho -y "[${package_name}] Checking md5sums of downloaded files"
-  let fastq_col=$(get_index_of 'fastq_ftp' "${ena_table_header[@]}")+1
+  let fastq_col=$(get_index_of 'fastq_ftp' "${ssf_header[@]}")+1
   downloaded_md5sums=$(
     tail -n +2 ${ena_table} | \
     awk -F "\t" -v col=${fastq_col} '{print $col}' | \
@@ -86,7 +86,7 @@ if [[ ${skip_md5} != 'TRUE' ]]; then
   )
 
   ## Expected checksums
-  let chksm_col=$(get_index_of 'fastq_md5' "${ena_table_header[@]}")+1
+  let chksm_col=$(get_index_of 'fastq_md5' "${ssf_header[@]}")+1
   expected_md5sums=$(
     tail -n +2 ${ena_table} | \
     awk -F "\t" -v col=${chksm_col} '{print $col}'
@@ -104,13 +104,13 @@ else
 fi
 
 ## Infer column indices
-let pid_col=$(get_index_of 'poseidon_IDs' "${ena_table_header[@]}")+1
-let lib_name_col=$(get_index_of 'library_name' "${ena_table_header[@]}")+1
-let instrument_model_col=$(get_index_of 'instrument_model' "${ena_table_header[@]}")+1
-let instrument_platform_col=$(get_index_of 'instrument_platform' "${ena_table_header[@]}")+1
-let fastq_col=$(get_index_of 'fastq_ftp' "${ena_table_header[@]}")+1
-let lib_built_col=$(get_index_of 'library_built' "${ena_table_header[@]}")+1
-let lib_udg_col=$(get_index_of 'udg' "${ena_table_header[@]}")+1
+let pid_col=$(get_index_of 'poseidon_IDs' "${ssf_header[@]}")+1
+let lib_name_col=$(get_index_of 'library_name' "${ssf_header[@]}")+1
+let instrument_model_col=$(get_index_of 'instrument_model' "${ssf_header[@]}")+1
+let instrument_platform_col=$(get_index_of 'instrument_platform' "${ssf_header[@]}")+1
+let fastq_col=$(get_index_of 'fastq_ftp' "${ssf_header[@]}")+1
+let lib_built_col=$(get_index_of 'library_built' "${ssf_header[@]}")+1
+let lib_udg_col=$(get_index_of 'udg' "${ssf_header[@]}")+1
 
 ## Keep track of observed values
 poseidon_ids=()
@@ -144,7 +144,7 @@ while read line; do
     
     ## Keep track of observed values
     poseidon_ids+=(${row_pid})
-    library_names=(${row_lib_id})
+    library_ids=(${row_lib_id})
   done
 
 done < <(tail -n +2 ${ena_table})

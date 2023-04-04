@@ -4,9 +4,9 @@ set -uo pipefail ## Pipefail, complain on new unassigned variables.
 ## Load helper bash functions
 source $(dirname ${0})/source_me.sh
 
-ssf_file=$1
-download_dir=$2
-symlink_dir=$3
+ssf_file=$(readlink -f ${1})
+download_dir=$(readlink -f ${2})
+symlink_dir=$(readlink -f ${3})
 md5sum_file="${download_dir}/expected_md5sums.txt"
 newest_fastq=$(ls -Art -1 ${download_dir}/*q.gz | tail -n 1) ## Reverse order and tail to avoid broken pipe errors
 script_debug_string="[validate_downloaded_data.sh]:"
@@ -42,27 +42,28 @@ while read line; do
   poseidon_id=$(echo "${line}" | awk -F "\t" -v X=${pid_col} '{print $X}')
   lib_name=$(echo "${line}" | awk -F "\t" -v X=${lib_name_col} '{print $X}')
   fastq_fn=$(echo "${line}" | awk -F "\t" -v X=${fastq_col} '{print $X}')
-  let lane=$(count_instances ${lib_name} "${library_ids[@]}")+1
 
   ## One set of sequencing data can correspond to multiple poseidon_ids
   for index in $(seq 1 1 $(number_of_entries ';' ${poseidon_id})); do
     row_pid=$(pull_by_index ';' ${poseidon_id} "${index}-1")
     row_lib_id="${row_pid}_${lib_name}" ## paste poseidon ID with Library ID to ensure unique naming of library results
+    let lane=$(count_instances ${row_lib_id} "${library_ids[@]}")+1
     
     read -r seq_type r1 r1_target r2 r2_target < <(symlink_names_from_ena_fastq ${download_dir} ${symlink_dir} ${row_lib_id}_L${lane} ${fastq_fn})
 
+    echo ${row_pid} ${seq_type} ${r1}
     ## Symink downloaded data to new naming to allow for multiple poseidon IDs per fastq.
     ## All symlinks are recreated if already existing
     if [[ ${seq_type} == 'SE' ]]; then
-      ln -fs ${r1} ${r1_target}
+      ln -vfs ${r1} ${r1_target}
     elif [[ ${seq_type} == 'PE' ]]; then
-      ln -fs ${r1} ${r1_target}
-      ln -fs ${r2} ${r2_target}
+      ln -vfs ${r1} ${r1_target}
+      ln -vfs ${r2} ${r2_target}
     fi
 
     ## Keep track of observed values
     poseidon_ids+=(${row_pid})
-    library_ids=(${row_lib_id})
+    library_ids+=(${row_lib_id})
   done
 
 done < <(tail -n +2 ${ssf_file})

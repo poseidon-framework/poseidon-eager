@@ -6,9 +6,13 @@ source $(dirname ${0})/source_me.sh
 
 ssf_file=$1
 download_dir=$2
+symlink_dir=$3
 md5sum_file="${download_dir}/expected_md5sums.txt"
-newest_fastq=$(ls -t -1 ${download_dir}/*q.gz | head -n1)
+newest_fastq=$(ls -Art -1 ${download_dir}/*q.gz | tail -n 1) ## Reverse order and tail to avoid broken pipe errors
 script_debug_string="[validate_downloaded_data.sh]:"
+
+## Create output directory if it does not exist
+mkdir -p ${symlink_dir}
 
 if [[ ! -f ${md5sum_file} ]]; then
   ## If no md5sum file, create md5sum 
@@ -23,3 +27,40 @@ else
 fi
 
 ## TODO: Parse SSF file, create symlinks with data, and run patch.sh on TSV to prepare eager input dirs
+ssf_header=($(head -n1 ${ssf_file}))
+
+let pid_col=$(get_index_of 'poseidon_IDs' "${ssf_header[@]}")+1
+let lib_name_col=$(get_index_of 'library_name' "${ssf_header[@]}")+1
+let fastq_col=$(get_index_of 'fastq_ftp' "${ssf_header[@]}")+1
+
+poseidon_ids=()
+library_ids=()
+
+while read line; do
+  poseidon_id=$(echo "${line}" | awk -F "\t" -v X=${pid_col} '{print $X}')
+  lib_name=$(echo "${line}" | awk -F "\t" -v X=${lib_name_col} '{print $X}')
+  fastq_fn=$(echo "${line}" | awk -F "\t" -v X=${fastq_col} '{print $X}')
+  let lane=$(count_instances ${lib_name} "${library_ids[@]}")+1
+
+  ## One set of sequencing data can correspond to multiple poseidon_ids
+  for index in $(seq 1 1 $(number_of_entries ';' ${poseidon_id})); do
+    row_pid=$(pull_by_index ';' ${poseidon_id} "${index}-1")
+    row_lib_id="${row_pid}_${lib_name}" ## paste poseidon ID with Library ID to ensure unique naming of library results
+    
+    read -r seq_type r1 r1_target r2 r2_target < <(symlink_names_from_ena_fastq ${download_dir} ${symlink_dir} ${row_lib_id}_L${lane} ${fastq_fn})
+
+    ## Symink downloaded data to new naming to allow for multiple poseidon IDs per fastq.
+    ## All symlinks are recreated if already existing
+    if [[ ${seq_type} == 'SE' ]]; then
+      ln -fs ${r1} ${r1_target}
+    elif [[ ${seq_type} == 'PE' ]]; then
+      ln -fs ${r1} ${r1_target}
+      ln -fs ${r2} ${r2_target}
+    fi
+
+    ## Keep track of observed values
+    poseidon_ids+=(${row_pid})
+    library_ids=(${row_lib_id})
+  done
+
+done < <(tail -n +2 ${ssf_file})

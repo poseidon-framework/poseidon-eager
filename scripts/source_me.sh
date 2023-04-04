@@ -275,6 +275,43 @@ function dummy_r1_r2_from_ena_fastq() {
   echo "${seq_type} ${r1} ${r2}"
 }
 
+## Function to create R1 and R2 columns from ena_table fastq_fn entries
+#   usage: symlink_names_from_ena_fastq <download_path> <output_path> <out_fn_prefix> <fastq_ftp>
+#   Returns: a space separated list of seq_type R1 R1_symlink R2 R2_symlink
+function symlink_names_from_ena_fastq() {
+  local download_path
+  local output_path
+  local out_fn_prefix
+  local value
+  local r1
+  local r1_symlink
+  local r2
+  local r2_symlink
+  local seq_type
+  local n_entries
+
+  download_path="${1}"
+  output_path="${2}"
+  out_fn_prefix="${3}"
+  value="${4}"
+
+  n_entries=$(number_of_entries ';' ${value})
+
+  r1="${download_path}/$(basename $(pull_by_index ';' ${value} 0))"
+  r1_symlink="${output_path}/${out_fn_prefix}_R1.fastq.gz"
+  if [[ ${n_entries} -gt 1 ]]; then
+    r2="${download_path}/$(basename $(pull_by_index ';' ${value} 1))"
+    r2_symlink="${output_path}/${out_fn_prefix}_R2.fastq.gz"
+    seq_type="PE"
+  else
+  ## If no R2, then SE
+    r2="NA"
+    r2_symlink="NA"
+    seq_type="SE"
+  fi
+
+  echo "${seq_type} ${r1} ${r1_symlink} ${r2} ${r2_symlink}"
+}
 
 ## Function to create R1 and R2 columns from ena_table fastq_fn entries
 #   usage: r1_r2_from_ena_fastq ${path_to_ena_data} ${fastq_fn}

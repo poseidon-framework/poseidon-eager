@@ -8,8 +8,8 @@
 
 ## usage tsv_patch.sh <local_data_dir> <input_tsv>
 
-local_data_dir="${1}"
-input_tsv="${2}"
+local_data_dir="$(readlink -f ${1})"
+input_tsv="$(readlink -f ${2})"
 output_tsv="$(dirname ${local_data_dir})/$(basename -s ".tsv" ${input_tsv}).finalised.tsv"
 
 sed -e "s|<PATH_TO_DATA>|${local_data_dir}|g" ${input_tsv} > ${output_tsv}

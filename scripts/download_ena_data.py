@@ -10,8 +10,8 @@ import wget
 parser = argparse.ArgumentParser(
     prog = 'download_ena_data',
     description = 'This script downloads raw FASTQ data from the ENA, using '
-                  'links to the raw data and metadata provided by a Poseidon-'
-                  'formatted sequencingSourceFile')
+                    'links to the raw data and metadata provided by a Poseidon-'
+                    'formatted sequencingSourceFile')
 
 parser.add_argument('-d', '--ssf_dir', metavar="<DIR>", required=True, help="The directory to scan for poseidon-formatted sequencingSourceFiles, to download the described data.")
 parser.add_argument('-o', '--output_dir', metavar="<DIR>", required=True, help="The output directory for the FASTQ files.")

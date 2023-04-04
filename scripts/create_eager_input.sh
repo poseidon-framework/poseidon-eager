@@ -127,7 +127,6 @@ while read line; do
   instrument_model=$(echo "${line}" | awk -F "\t" -v X=${instrument_model_col} '{print $X}')
   instrument_platform=$(echo "${line}" | awk -F "\t" -v X=${instrument_platform_col} '{print $X}')
   colour_chemistry=$(infer_colour_chemistry "${instrument_platform}" "${instrument_model}")
-  let lane=$(count_instances ${lib_name} "${library_ids[@]}")+1
   library_built_field=$(echo "${line}" | awk -F "\t" -v X=${lib_built_col} '{print $X}')
   udg_treatment_field=$(echo "${line}" | awk -F "\t" -v X=${lib_udg_col} '{print $X}')
   ## in the ssf file, these fields should correspond to single fastQ, so they should never be list values anymore.
@@ -138,13 +137,14 @@ while read line; do
   for index in $(seq 1 1 $(number_of_entries ';' ${poseidon_id})); do
     row_pid=$(pull_by_index ';' ${poseidon_id} "${index}-1")
     row_lib_id="${row_pid}_${lib_name}" ## paste poseidon ID with Library ID to ensure unique naming of library results
-    
+    let lane=$(count_instances ${row_lib_id} "${library_ids[@]}")+1
+
     read -r seq_type r1 r2 < <(dummy_r1_r2_from_ena_fastq ${raw_data_dummy_path} ${row_lib_id}_L${lane} ${fastq_fn})
     echo -e "${row_pid}\t${row_lib_id}\t${lane}\t${colour_chemistry}\t${seq_type}\t${organism}\t${library_built}\t${udg_treatment}\t${r1}\t${r2}\tNA" >> ${out_file}
-    
+    errecho -r "${row_pid}\t${row_lib_id}\t${lane}"
     ## Keep track of observed values
     poseidon_ids+=(${row_pid})
-    library_ids=(${row_lib_id})
+    library_ids+=(${row_lib_id})
   done
 
 done < <(tail -n +2 ${ena_table})

@@ -6,7 +6,6 @@ function Helptext() {
   echo -ne "\t usage: ${0} [options] Package_name\n\n"
   echo -ne "This script reads the information present in the ena_table of a poseidon package and creates a TSV file that can be used for processing the publicly available data with nf-core/eager.\n\n"
   echo -ne "Options:\n"
-  echo -ne "-s, --skip_checksum\tSkip md5sum checking of input data.\n"
   echo -ne "-h, --help\t\tPrint this text and exit.\n"
   echo -ne "-v, --version \t\tPrint version and exit.\n"
 }
@@ -21,7 +20,6 @@ eval set -- "${TEMP}"
 
 ## Parameter defaults
 package_name=''
-skip_md5='TRUE' #'FALSE'  ## Deactivated for now until decisions about the raw data handling are made.
 # root_download_dir='/mnt/archgen/poseidon/raw_sequencing_data'
 # root_output_dir='/mnt/archgen/poseidon/raw_sequencing_data/eager'
 
@@ -34,7 +32,6 @@ fi
 ## Read in CLI arguments
 while true ; do
   case "$1" in
-    -s|--skip_checksum) skip_md5='TRUE'; shift ;;
     -h|--help)          Helptext; exit 0 ;;
     -v|--version)       echo ${VERSION}; exit 0;;
     --)                 package_name="${2}"; break ;;
@@ -70,37 +67,18 @@ out_file="${package_dir}/${package_name}.tsv"
 ## This will all break down if the headers contain whitespace.
 ssf_header=($(head -n1 ${ena_table}))
 
-## TODO Update checksum checking once decisions on raw data handling are made.
-## Checksums
-if [[ ${skip_md5} != 'TRUE' ]]; then
-  errecho -y "[${package_name}] Checking md5sums of downloaded files"
-  let fastq_col=$(get_index_of 'fastq_ftp' "${ssf_header[@]}")+1
-  downloaded_md5sums=$(
-    tail -n +2 ${ena_table} | \
-    awk -F "\t" -v col=${fastq_col} '{print $col}' | \
-    while read path; do
-      echo "${package_rawdata_dir}/$(basename ${path})"
-    done | \
-    xargs md5sum |\
-    cut -f 1 -d " "
-  )
-
-  ## Expected checksums
-  let chksm_col=$(get_index_of 'fastq_md5' "${ssf_header[@]}")+1
-  expected_md5sums=$(
-    tail -n +2 ${ena_table} | \
-    awk -F "\t" -v col=${chksm_col} '{print $col}'
-  )
-
-  ## Throw error if there's a mismatch in md5sums. Matches whole set of sums, so if any files are missing, that will also cause errors.
-  ## Order is same in both sets otherwise.
-  if [[ "${downloaded_md5sums}" != "${expected_md5sums}" ]]; then
-    check_fail 1 "md5sum mismatch detected. Please verify FastQ files."
-  else
-    errecho -y "[${package_name}] md5sums check completed successfully"
+## Check that all expected columns are in the input file
+req_cols=('poseidon_IDs' 'library_name' 'instrument_model' 'instrument_platform' 'fastq_ftp' 'library_built' 'udg')
+missing_cols=''
+for col in ${req_cols[@]}; do
+  col_idx=$(get_index_of "${col}" "${ssf_header[@]}")
+  if [[ ${col_idx} -eq -1 ]]; then
+    missing_cols+="'${col}', "
   fi
-else
-  errecho -y "[${package_name}] Skipping md5sum check"
+done
+
+if [[ ${missing_cols} != '' ]]; then
+  check_fail 1 "[${package_name}]: Some columns are missing from the SSF file. Please check the SSF file and retry.\n\tMissing columns: ${missing_cols%, }"
 fi
 
 ## Infer column indices
@@ -141,7 +119,7 @@ while read line; do
 
     read -r seq_type r1 r2 < <(dummy_r1_r2_from_ena_fastq ${raw_data_dummy_path} ${row_lib_id}_L${lane} ${fastq_fn})
     echo -e "${row_pid}\t${row_lib_id}\t${lane}\t${colour_chemistry}\t${seq_type}\t${organism}\t${library_built}\t${udg_treatment}\t${r1}\t${r2}\tNA" >> ${out_file}
-    errecho -r "${row_pid}\t${row_lib_id}\t${lane}"
+
     ## Keep track of observed values
     poseidon_ids+=(${row_pid})
     library_ids+=(${row_lib_id})

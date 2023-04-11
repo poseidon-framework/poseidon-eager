@@ -38,6 +38,7 @@ function check_fail() {
 #   list=("banana split" "apple" "potato" "banana" "apple")
 #   get_index_of ${i} "${list[@]}" ## returns 3 ('banana split' =/= 'banana')
 #   Returns: a list of all indexes that match the value.
+#         -1 is returned if value is not found within the array.
 function get_index_of() {
   local i
   local value
@@ -54,7 +55,11 @@ function get_index_of() {
       indices+="${i} "
     fi
   done
-  echo ${indices}
+  if [[ ${indices} != '' ]]; then
+    echo ${indices}
+  else
+    echo "-1"
+  fi
 }
 
 ## Function to return index of item in bash array

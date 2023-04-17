@@ -35,6 +35,7 @@ sed -i -e "s|<PATH_TO_DATA>|${local_data_dir}|g" ${output_tsv}
 # sed -ie 's/replace_this/with_this/g' ${output_tsv}
 
 ## Keep track of versions
+version_file="$(dirname ${input_tsv})/script_versions.txt"
 ##    Remove versions from older run if there
 grep -v -F -e "$(basename ${0})" -e "source_me.sh for final TSV" ${version_file} >${version_file}.new
 ##    Then add new versions

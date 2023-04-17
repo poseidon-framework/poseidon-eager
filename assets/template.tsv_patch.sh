@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+set -uo pipefail ## Pipefail, complain on new unassigned variables.
 
 ## Track the version of the TSV_patch template used
 VERSION='0.1.0dev'

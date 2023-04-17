@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-VERSION='0.1.0dev'
+VERSION='0.1.1dev'
 
 ## Helptext function
 function Helptext() {
@@ -63,6 +63,7 @@ fi
 ## Read required info from yml file
 # package_rawdata_dir="${root_download_dir}/${package_name}"
 out_file="${package_dir}/${package_name}.tsv"
+version_file="${package_dir}/script_versions.txt"
 
 ## This will all break down if the headers contain whitespace.
 ssf_header=($(head -n1 ${ena_table}))
@@ -96,7 +97,7 @@ library_ids=()
 
 ## Paste together stuff to make a TSV. Header will flush older tsv if it exists.
 errecho -y "[${package_name}] Creating TSV input for nf-core/eager (v2.*)."
-echo -e "Sample_Name\tLibrary_ID\tLane\tColour_Chemistry\tSeqType\tOrganism\tStrandedness\tUDG_Treatment\tR1\tR2\tBAM" > ${out_file}
+echo -e "Sample_Name\tLibrary_ID\tLane\tColour_Chemistry\tSeqType\tOrganism\tStrandedness\tUDG_Treatment\tR1\tR2\tBAM\tR1_target_file\tR2_target_file" > ${out_file}
 organism="Homo sapiens (modern human)"
 while read line; do
   poseidon_id=$(echo "${line}" | awk -F "\t" -v X=${pid_col} '{print $X}')
@@ -125,8 +126,11 @@ while read line; do
     row_lib_id="${row_pid}_${lib_name}${strandedness_suffix}" ## paste poseidon ID with Library ID to ensure unique naming of library results (both with suffix)
     let lane=$(count_instances ${row_lib_id} "${library_ids[@]}")+1
 
+    ## Get intended input file names on local system (R1, R2)
     read -r seq_type r1 r2 < <(dummy_r1_r2_from_ena_fastq ${raw_data_dummy_path} ${row_lib_id}_L${lane} ${fastq_fn})
-    echo -e "${row_pid}\t${row_lib_id}\t${lane}\t${colour_chemistry}\t${seq_type}\t${organism}\t${library_built}\t${udg_treatment}\t${r1}\t${r2}\tNA" >> ${out_file}
+    ## Also add column with the File that those will symlink to, for transparency during PR review.
+    read -r seq_type2 r1_target r2_target < <(r1_r2_from_ena_fastq ${fastq_fn})
+    echo -e "${row_pid}\t${row_lib_id}\t${lane}\t${colour_chemistry}\t${seq_type}\t${organism}\t${library_built}\t${udg_treatment}\t${r1}\t${r2}\tNA\t${r1_target}\t${r2_target}" >> ${out_file}
 
     ## Keep track of observed values
     poseidon_ids+=(${row_pid})
@@ -135,3 +139,8 @@ while read line; do
 
 done < <(tail -n +2 ${ena_table})
 errecho -y "[${package_name}] TSV creation completed"
+
+## Keep track of versions
+##    This is the first part of the pipeline, so always flush any older versions, since everything needs rerunning.
+echo -e "$(basename ${0}):\t${VERSION}" > ${version_file}
+echo -e "source_me.sh for initial TSV:\t${HELPER_FUNCTION_VERSION}" >>${version_file}

@@ -114,22 +114,23 @@ while read line; do
   ## One set of sequencing data can correspond to multiple poseidon_ids
   for index in $(seq 1 1 $(number_of_entries ';' ${poseidon_id})); do
     row_pid=$(pull_by_index ';' ${poseidon_id} "${index}-1")
-    ## Add _ss suffix to sample_name and library_id if single stranded (data never gets merged in eager).
-    if [[ ${library_built} == "single" ]]; then
+    ## Add _ss suffix to sample_name (and later library_id) if single stranded (data never gets merged with double stranded data in eager).
+    if [[ "${library_built}" == "single" ]]; then
       strandedness_suffix='_ss'
+      row_pid+=${strandedness_suffix}
     else
       strandedness_suffix=''
     fi
 
-    row_lib_id="${row_pid}${strandedness_suffix}_${lib_name}${strandedness_suffix}" ## paste poseidon ID with Library ID to ensure unique naming of library results (both with suffix)
+    row_lib_id="${row_pid}_${lib_name}${strandedness_suffix}" ## paste poseidon ID with Library ID to ensure unique naming of library results (both with suffix)
     let lane=$(count_instances ${row_lib_id} "${library_ids[@]}")+1
 
     read -r seq_type r1 r2 < <(dummy_r1_r2_from_ena_fastq ${raw_data_dummy_path} ${row_lib_id}_L${lane} ${fastq_fn})
     echo -e "${row_pid}\t${row_lib_id}\t${lane}\t${colour_chemistry}\t${seq_type}\t${organism}\t${library_built}\t${udg_treatment}\t${r1}\t${r2}\tNA" >> ${out_file}
 
     ## Keep track of observed values
-    poseidon_ids+=(${row_pid}${strandedness_suffix})
-    library_ids+=(${row_lib_id}${strandedness_suffix})
+    poseidon_ids+=(${row_pid})
+    library_ids+=(${row_lib_id})
   done
 
 done < <(tail -n +2 ${ena_table})

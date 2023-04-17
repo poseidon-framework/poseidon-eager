@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-VERSION='0.0.1dev'
+VERSION='0.1.0dev'
 
 ## Helptext function
 function Helptext() {
@@ -114,15 +114,22 @@ while read line; do
   ## One set of sequencing data can correspond to multiple poseidon_ids
   for index in $(seq 1 1 $(number_of_entries ';' ${poseidon_id})); do
     row_pid=$(pull_by_index ';' ${poseidon_id} "${index}-1")
-    row_lib_id="${row_pid}_${lib_name}" ## paste poseidon ID with Library ID to ensure unique naming of library results
+    ## Add _ss suffix to sample_name and library_id if single stranded (data never gets merged in eager).
+    if [[ ${library_built} == "single" ]]; then
+      strandedness_suffix='_ss'
+    else
+      strandedness_suffix=''
+    fi
+
+    row_lib_id="${row_pid}${strandedness_suffix}_${lib_name}${strandedness_suffix}" ## paste poseidon ID with Library ID to ensure unique naming of library results (both with suffix)
     let lane=$(count_instances ${row_lib_id} "${library_ids[@]}")+1
 
     read -r seq_type r1 r2 < <(dummy_r1_r2_from_ena_fastq ${raw_data_dummy_path} ${row_lib_id}_L${lane} ${fastq_fn})
     echo -e "${row_pid}\t${row_lib_id}\t${lane}\t${colour_chemistry}\t${seq_type}\t${organism}\t${library_built}\t${udg_treatment}\t${r1}\t${r2}\tNA" >> ${out_file}
 
     ## Keep track of observed values
-    poseidon_ids+=(${row_pid})
-    library_ids+=(${row_lib_id})
+    poseidon_ids+=(${row_pid}${strandedness_suffix})
+    library_ids+=(${row_lib_id}${strandedness_suffix})
   done
 
 done < <(tail -n +2 ${ena_table})

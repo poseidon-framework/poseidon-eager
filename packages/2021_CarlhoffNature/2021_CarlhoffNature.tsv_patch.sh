@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+## Track the version of the TSV_patch template used
+VERSION='0.1.0dev'
+
 ## This script is applied to the eager input TSV file locally to edit the dummy
 ##    path to the fastQ files added by `create_eager_input.sh` to a real local
 ##    path provided as a positional argument. Any further local tweaks to the

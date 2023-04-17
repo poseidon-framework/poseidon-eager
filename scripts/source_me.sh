@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+HELPER_FUNCTION_VERSION='0.0.1dev'
 
 ## Print coloured messages to stderr
 #   errecho -r will print in red
@@ -226,23 +227,21 @@ function infer_library_strandedness() {
 }
 
 ## Function to create R1 and R2 columns from ena_table fastq_fn entries
-#   usage: r1_r2_from_ena_fastq <prefix> <fastq_ftp>
+#   usage: r1_r2_from_ena_fastq <fastq_ftp>
 #   Returns: a thrupple of: seq_type R1 R2
 function r1_r2_from_ena_fastq() {
-  local prefix
   local value
   local r1
   local r2
   local seq_type
 
-  prefix="${1}"
-  value="${2}"
-  r1="${prefix}$(pull_by_index ';' ${value} 0)"
-  r2="${prefix}$(pull_by_index ';' ${value} 1)"
+  value="${1}"
+  r1=$(basename "$(pull_by_index ';' ${value} 0)")
+  r2=$(basename "$(pull_by_index ';' ${value} 1)")
   seq_type="PE"
 
   ## If no R2, then SE
-  if [[ "${r2}" == "${prefix}" ]]; then
+  if [[ "${r2}" == '' ]]; then
     r2="NA"
     seq_type="SE"
   fi
@@ -251,7 +250,7 @@ function r1_r2_from_ena_fastq() {
 }
 
 ## Function to create R1 and R2 columns from ena_table fastq_fn entries
-#   usage: r1_r2_from_ena_fastq <path_prefix> <out_fn_prefix> <fastq_ftp> 
+#   usage: dummy_r1_r2_from_ena_fastq <path_prefix> <out_fn_prefix> <fastq_ftp> 
 #   Returns: a thrupple of: seq_type R1 R2
 function dummy_r1_r2_from_ena_fastq() {
   local prefix
@@ -319,7 +318,7 @@ function symlink_names_from_ena_fastq() {
 }
 
 ## Function to create R1 and R2 columns from ena_table fastq_fn entries
-#   usage: r1_r2_from_ena_fastq ${path_to_ena_data} ${fastq_fn}
+#   usage: local_r1_r2_from_ena_fastq ${path_to_ena_data} ${fastq_fn}
 #   Returns: a thrupple of: seq_type R1 R2
 function local_r1_r2_from_ena_fastq() {
   local data_path

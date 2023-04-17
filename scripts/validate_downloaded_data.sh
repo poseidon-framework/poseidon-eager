@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail ## Pipefail, complain on new unassigned variables.
-
+VERSION='0.1.0dev'
 ## Load helper bash functions
 source $(dirname ${0})/source_me.sh
 
@@ -67,3 +67,12 @@ while read line; do
   done
 
 done < <(tail -n +2 ${ssf_file})
+
+## Keep track of versions
+version_file="$(dirname ${ssf_file})/script_versions.txt"
+##    Remove versions from older run if there
+grep -v -F -e "$(basename ${0})" -e "source_me.sh for data validation" ${version_file} >${version_file}.new
+##    Then add new versions
+echo -e "$(basename ${0}):\t${VERSION}" >> ${version_file}.new
+echo -e "source_me.sh for data validation:\t${HELPER_FUNCTION_VERSION}" >>${version_file}.new
+mv ${version_file}.new ${version_file}

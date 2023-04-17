@@ -71,6 +71,7 @@ jobs:
         run: |
           for package_name in ${{ steps.get_package_names.outputs.package_names }}; do
             ./scripts/create_eager_input.sh ${package_name}
+            echo -e "create_eager_input.sh:\t$(./scripts/create_eager_input.sh -v)" >./packages/${package_name}/script_versions.txt
           done
 
       - name: Add nextflow config from template

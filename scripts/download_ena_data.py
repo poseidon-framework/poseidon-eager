@@ -33,7 +33,7 @@ for root, dirs, files in os.walk( os.path.join(args.ssf_dir) ):
             source_file = os.path.join(root, file_name)
             print("[download_ena_data.py]: Found Sequencing Source File: ", source_file, file=sys.stderr)
             package_name = os.path.splitext(file_name)[0] ## The SSF name and desired package name must match
-            odir = os.path.join(args.output_dir, package_name)
+            odir = os.path.abspath(os.path.join(args.output_dir, package_name))
             os.makedirs(odir, exist_ok=True)
             line_count=1
             with open(source_file, 'r') as f:

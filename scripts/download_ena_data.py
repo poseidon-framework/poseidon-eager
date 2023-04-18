@@ -7,6 +7,8 @@ import argparse
 import os
 import wget
 
+VERSION = "0.1.0dev"
+
 parser = argparse.ArgumentParser(
     prog = 'download_ena_data',
     description = 'This script downloads raw FASTQ data from the ENA, using '
@@ -16,11 +18,17 @@ parser = argparse.ArgumentParser(
 parser.add_argument('-d', '--ssf_dir', metavar="<DIR>", required=True, help="The directory to scan for poseidon-formatted sequencingSourceFiles, to download the described data.")
 parser.add_argument('-o', '--output_dir', metavar="<DIR>", required=True, help="The output directory for the FASTQ files.")
 parser.add_argument('--dry_run', action='store_true', help="Only list the download commands, but don't do anything.")
+parser.add_argument('-v', '--version', action='version', version=VERSION)
 
 def read_ena_table(file_name):
     l = file_name.readlines()
     headers = l[0].split()
     return map(lambda row: dict(zip(headers, row.split('\t'))), l[1:])
+
+def read_versions_fn(file_name):
+    l = file_name.readlines()
+    headers = ['tool', 'version']
+    return map(lambda row: dict(zip(headers, row.strip().split('\t'))), l[0:])
 
 args = parser.parse_args()
 
@@ -56,5 +64,21 @@ for root, dirs, files in os.walk( os.path.join(args.ssf_dir) ):
                         if not args.dry_run:
                             wget.download("https://" + fastq_url, out=target_file)
                             print(f"{fastq_md5}  {target_file}", file=md5_fn)
-
-
+            
+            ## Keep track of version information
+            version_file=os.path.join(os.path.dirname(source_file), "script_versions.txt")
+            new_version_file=version_file+".tmp"
+            version_exists=False
+            with open(version_file, 'r') as versions_in:
+                versions_out=open(version_file+".tmp", 'w')
+                for version_entry in read_versions_fn(versions_in):
+                    if version_entry['tool'] != 'scripts/download_ena_data.py:':
+                        print("{}\t{}".format(version_entry['tool'], version_entry['version']), sep='\t', file = versions_out)
+                    else:
+                        ## If version for download exist, update it
+                        version_exists=True
+                        print("{}\t{}".format("download_ena_data.py:", VERSION)               , sep='\t', file = versions_out)
+                ## If version for download did not exist, add it
+                if not version_exists:
+                    print("{}\t{}".format("download_ena_data.py:", VERSION)                   , sep='\t', file = versions_out)
+            os.replace(src = new_version_file, dst = version_file)

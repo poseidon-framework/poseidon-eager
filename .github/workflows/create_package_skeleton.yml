@@ -87,6 +87,7 @@ jobs:
         run: |
           for package_name in ${{ steps.get_package_names.outputs.package_names }}; do
             cp ./assets/template.tsv_patch.sh ./packages/${package_name}/${package_name}.tsv_patch.sh
+            chmod +x ./packages/${package_name}/${package_name}.tsv_patch.sh
           done
 
       - name: Commit & push changes

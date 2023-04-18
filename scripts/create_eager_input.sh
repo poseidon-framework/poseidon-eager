@@ -16,7 +16,7 @@ repo_dir=$(dirname $(readlink -f ${0}))/..  ## The repository will be the origin
 source ${repo_dir}/scripts/source_me.sh             ## Source helper functions
 
 ## Parse CLI args.
-TEMP=`getopt -q -o hvs --long help,version,skip_checksum -n "${0}" -- "$@"`
+TEMP=`getopt -q -o hv --long help,version -n "${0}" -- "$@"`
 eval set -- "${TEMP}"
 
 ## Parameter defaults

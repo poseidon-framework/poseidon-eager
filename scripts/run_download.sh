@@ -4,7 +4,7 @@
 ##    found in poseidon-formatted sequencingSourceFiles.
 ##    !! This is a localised script, including hard-coded paths for processing in MPI-EVA. !!
 package_name=$1
-OUTDIR="/mnt/archgen/poseidon/raw_sequencing_data"
+OUTDIR="/mnt/archgen/poseidon/poseidon-eager/raw_sequencing_data"
 INDIR="/mnt/archgen/poseidon/poseidon-eager/packages/${package_name}"
 LOGDIR="${OUTDIR}/download_logs"
 SCRIPT="/mnt/archgen/poseidon/poseidon-eager/scripts/download_ena_data.py"

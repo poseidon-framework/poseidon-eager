@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 VERSION='0.1.1dev'
-set -uo pipefail ## Pipefail, complain on new unassigned variables.
+set -o pipefail ## Pipefail, complain on new unassigned variables.
 
 ## Helptext function
 function Helptext() {

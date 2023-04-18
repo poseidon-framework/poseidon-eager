@@ -51,7 +51,6 @@ while read line; do
     
     read -r seq_type r1 r1_target r2 r2_target < <(symlink_names_from_ena_fastq ${download_dir} ${symlink_dir} ${row_lib_id}_L${lane} ${fastq_fn})
 
-    echo ${row_pid} ${seq_type} ${r1}
     ## Symink downloaded data to new naming to allow for multiple poseidon IDs per fastq.
     ## All symlinks are recreated if already existing
     if [[ ${seq_type} == 'SE' ]]; then

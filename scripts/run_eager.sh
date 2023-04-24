@@ -86,8 +86,8 @@ for eager_input in ${root_eager_dir}/*/*.finalised.tsv; do
         with_tower='-with-tower'
     fi
 
-    ## Only try to run eager if the input is newer than the latest multiQC report
-    if [[ ${eager_input} -nt ${eager_output_dir}/multiqc/multiqc_report.html ]]; then
+    ## Only try to run eager if the input is newer than the latest multiQC report, or the parameter config is newer than the latest report. 
+    if [[ ${eager_input} -nt ${eager_output_dir}/multiqc/multiqc_report.html ]] || [[ ${package_config} -nt ${eager_output_dir}/multiqc/multiqc_report.html ]]; then
         ## Build nextflow command
         CMD="${nxf_path}/nextflow run nf-core/eager \
         -r ${eager_version} \

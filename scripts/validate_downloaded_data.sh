@@ -34,6 +34,7 @@ ssf_header=($(head -n1 ${ssf_file}))
 let pid_col=$(get_index_of 'poseidon_IDs' "${ssf_header[@]}")+1
 let lib_name_col=$(get_index_of 'library_name' "${ssf_header[@]}")+1
 let fastq_col=$(get_index_of 'fastq_ftp' "${ssf_header[@]}")+1
+let lib_built_col=$(get_index_of 'library_built' "${ssf_header[@]}")+1
 
 poseidon_ids=()
 library_ids=()
@@ -42,13 +43,25 @@ while read line; do
   poseidon_id=$(echo "${line}" | awk -F "\t" -v X=${pid_col} '{print $X}')
   lib_name=$(echo "${line}" | awk -F "\t" -v X=${lib_name_col} '{print $X}')
   fastq_fn=$(echo "${line}" | awk -F "\t" -v X=${fastq_col} '{print $X}')
+  library_built_field=$(echo "${line}" | awk -F "\t" -v X=${lib_built_col} '{print $X}')
+  library_built=$(infer_library_strandedness ${library_built_field} 0)
 
   ## One set of sequencing data can correspond to multiple poseidon_ids
   for index in $(seq 1 1 $(number_of_entries ';' ${poseidon_id})); do
     row_pid=$(pull_by_index ';' ${poseidon_id} "${index}-1")
-    row_lib_id="${row_pid}_${lib_name}" ## paste poseidon ID with Library ID to ensure unique naming of library results
+
+    ## Add _ss suffix to sample_name (and later library_id) if single stranded (data never gets merged with double stranded data in eager).
+    if [[ "${library_built}" == "single" ]]; then
+      strandedness_suffix='_ss'
+      row_pid+=${strandedness_suffix}
+    else
+      strandedness_suffix=''
+    fi
+
+    row_lib_id="${row_pid}_${lib_name}${strandedness_suffix}" ## paste poseidon ID with Library ID to ensure unique naming of library results (both with suffix)
     let lane=$(count_instances ${row_lib_id} "${library_ids[@]}")+1
     
+
     read -r seq_type r1 r1_target r2 r2_target < <(symlink_names_from_ena_fastq ${download_dir} ${symlink_dir} ${row_lib_id}_L${lane} ${fastq_fn})
 
     ## Symink downloaded data to new naming to allow for multiple poseidon IDs per fastq.

@@ -72,7 +72,7 @@ for root, dirs, files in os.walk( os.path.join(args.ssf_dir) ):
             with open(version_file, 'r') as versions_in:
                 versions_out=open(version_file+".tmp", 'w')
                 for version_entry in read_versions_fn(versions_in):
-                    if version_entry['tool'] != 'scripts/download_ena_data.py:':
+                    if version_entry['tool'] != 'download_ena_data.py:':
                         print("{}\t{}".format(version_entry['tool'], version_entry['version']), sep='\t', file = versions_out)
                     else:
                         ## If version for download exist, update it

@@ -96,7 +96,7 @@ for eager_input in ${root_eager_dir}/*/*.finalised.tsv; do
         --input ${eager_input} \
         --outdir ${eager_output_dir} \
         -w ${eager_work_dir} \
-        ${with-tower} \
+        ${with_tower} \
         -ansi-log false \
         -resume"
         

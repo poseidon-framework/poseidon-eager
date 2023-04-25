@@ -17,7 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `scripts/submit_as_array.sh`:          Helper script for submitting eager jobs as an SGE array on the MPI_EVA cluster.
 - Github Issue templates
 - Github pull request template
-- @delphis-bot makes the template tsv_patch executable for a package executable.
+- @delphis-bot makes the template tsv_patch for a package executable.
 - @delphis-bot now only triggered on new PR comment, not edits.
 - Propagate versions of all config files used in nf-core/eager runs to `config_profile_description`.
 - `scripts/download_and_localise_package_files.sh` is a wrapper script that does all the steps of getting a package backbone ready for eagering. Quality of life script for testing, but will be superceded soon.

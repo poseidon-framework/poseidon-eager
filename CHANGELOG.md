@@ -16,6 +16,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `scripts/run_eager.sh`:                Script to run nf-core/eager for all packages that need (re-)running.
 - `scripts/submit_as_array.sh`:          Helper script for submitting eager jobs as an SGE array on the MPI_EVA cluster.
 - Github Issue templates
+- Github pull request template
+- @delphis-bot makes the template tsv_patch executable for a package executable.
+- @delphis-bot now only triggered on new PR comment, not edits.
 - Propagate versions of all config files used in nf-core/eager runs to `config_profile_description`.
 
 ### `Fixed`

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-HELPER_FUNCTION_VERSION='0.0.1dev'
+HELPER_FUNCTION_VERSION='0.2.0dev'
 
 ## Print coloured messages to stderr
 #   errecho -r will print in red

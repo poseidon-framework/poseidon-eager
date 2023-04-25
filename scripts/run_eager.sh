@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-VERSION='0.1.0dev'
+VERSION='0.2.0dev'
 
 TEMP=`getopt -q -o hvadD --long help,version,test,array,dry_run,debug: -n 'run_eager.sh' -- "$@"`
 eval set -- "$TEMP"

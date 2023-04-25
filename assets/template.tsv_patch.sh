@@ -2,7 +2,7 @@
 set -uo pipefail ## Pipefail, complain on new unassigned variables.
 
 ## Track the version of the TSV_patch template used
-VERSION='0.1.0dev'
+VERSION='0.2.0dev'
 
 ## This script is applied to the eager input TSV file locally to edit the dummy
 ##    path to the fastQ files added by `create_eager_input.sh` to a real local

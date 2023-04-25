@@ -1,7 +1,7 @@
 ---
-name: Package request
+name: "Please add: [PACKAGE_NAME]"
 about: Request to add data from a publication to the Poseidon Package Directory
-labels: "package request"
+labels: "new package"
 ---
 
 <!--
@@ -10,7 +10,7 @@ labels: "package request"
 Hello there!
 
 Thanks for suggesting a new publication to add to the Poseidon Package Directory!
-Please ensure you are completing all the TODOs outlines in these comments for each section.
+Please ensure you are completing all the TODOs outlined in these comments for each section.
 -->
 
 ## Check for existing package

@@ -1,5 +1,5 @@
 ---
-name: Update package
+name: "Please update: [PACKAGE_NAME]"
 about: Suggest an update to an already-existing poseidon package.
 labels: "package update"
 ---
@@ -10,7 +10,7 @@ labels: "package update"
 Hello there!
 
 Thank you for suggesting changes to a package in the Poseidon Package Directory!
-Please ensure you are completing all the TODOs outlines in these comments for each section.
+Please ensure you are completing all the TODOs outlined in these comments for each section.
 -->
 
 ## Which package needs changes?

@@ -86,7 +86,7 @@ for eager_input in ${root_eager_dir}/*/*.finalised.tsv; do
         with_tower='-with-tower'
     fi
 
-    ## Only try to run eager if the input is newer than the latest multiQC report, or the parameter config is newer than the latest report. 
+    ## Only try to run eager if the input is newer than the latest MultiQC report, or the parameter config is newer than the latest report. 
     if [[ ${eager_input} -nt ${eager_output_dir}/multiqc/multiqc_report.html ]] || [[ ${package_config} -nt ${eager_output_dir}/multiqc/multiqc_report.html ]]; then
         ## Build nextflow command
         CMD="${nxf_path}/nextflow run nf-core/eager \
@@ -107,7 +107,7 @@ for eager_input in ${root_eager_dir}/*/*.finalised.tsv; do
             ## Use `continue` to avoid running eager interactivetly for arrayed jobs.
                 echo "cd $(dirname ${eager_input}) ; ${CMD}" | tr -s " " >> ${temp_file}
                 continue ## Skip running eager interactively if arrays are requested.
-            fi
+        fi
         
         ## NON-ARRAY RUNS
         ## Change to input directory to run from, to keep one cwd per run.
@@ -137,7 +137,7 @@ if [[ ${array} == 'TRUE' ]]; then
     ## -S /bin/bash Use bash
     ## -l v_hmem=40G ## 40GB memory limit (8 for java + the rest for garbage collector)
     ## -pe smp 2 ## Use two cores. one for nextflow, one for garbage collector
-    ## -n AE_spawner ## Name the job
+    ## -N Minotaur_spawner_$(basename ${temp_file}) ## Name the job
     ## -cwd Run in currect run directory (ran commands include a cd anyway, but to find the files at least)
     ## -j y ## join stderr and stdout into one output log file
     ## -b y ## Provided command is a binary already (i.e. executable)

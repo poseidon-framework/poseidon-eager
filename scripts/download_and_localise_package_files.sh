@@ -32,7 +32,7 @@ done
 
 ## Source helper functions
 repo_dir=$(dirname $(readlink -f ${0}))/..  ## The repository will be the original position of this script. If a user copies instead of symlink, this will fail.
-source ${repo_dir}/scripts/source_me.sh             ## Source helper functions
+source ${repo_dir}/scripts/source_me.sh   ## Source helper functions
 
 if [[ -z package_name ]]; then
   errecho -r "${script_debug_string} No package name provided."

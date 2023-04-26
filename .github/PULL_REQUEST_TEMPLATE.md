@@ -34,6 +34,6 @@ This will add a number of files to the PR. Check that they are all there.
   - [ ] Check that the `R1_target_file` and `R2_target_file` columns point to the correct FastQ files for the library (i.e. consistent with SSF file).
 
 ### Package config file (`*config`)
-The template config file includes a few TODO stateents, and information about them. Please ensure that you:
-  -[ ] Select the appropriate config for the CaptureType of the package.
-  -[ ] If any nf-core/eager parameters need to be altered from their defaults, add them at the end of the `params` section of the config file.
+The template config file includes a few TODO statements, and information about them. Please ensure that you:
+  - [ ] Select the appropriate config for the CaptureType of the package.
+  - [ ] If any nf-core/eager parameters need to be altered from their defaults, add them at the end of the `params` section of the config file.

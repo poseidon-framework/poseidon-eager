@@ -129,7 +129,7 @@ while read line; do
 
     ## Get intended input file names on local system (R1, R2)
     read -r seq_type r1 r2 < <(dummy_r1_r2_from_ena_fastq ${raw_data_dummy_path} ${row_lib_id}_L${lane} ${fastq_fn})
-    ## Also add column with the File that those will symlink to, for transparency during PR review.
+    ## Also add column with the file that those will symlink to, for transparency during PR review.
     read -r seq_type2 r1_target r2_target < <(r1_r2_from_ena_fastq ${fastq_fn})
     echo -e "${row_pid}\t${row_lib_id}\t${lane}\t${colour_chemistry}\t${seq_type}\t${organism}\t${library_built}\t${udg_treatment}\t${r1}\t${r2}\tNA\t${r1_target}\t${r2_target}" >> ${out_file}
 

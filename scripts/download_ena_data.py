@@ -62,6 +62,7 @@ for root, dirs, files in os.walk( os.path.join(args.ssf_dir) ):
                     else:
                         print(f"[download_ena_data.py]: Downloading {fastq_url} into {target_file}", file=sys.stderr)
                         if not args.dry_run:
+                            ## TODO Swap to aspera for faster downloads
                             wget.download("https://" + fastq_url, out=target_file)
                             print(f"{fastq_md5}  {target_file}", file=md5_fn)
             

@@ -30,10 +30,10 @@ This will add a number of files to the PR. Check that they are all there.
 <!-- TODO: Please do the minimal validation of the files outlined below -->
 
 ### Package TSV file (`*.tsv`)
-  - [ ] Check that the `udg`, `library_built` columns are correct for each library.
-  - [ ] Check that the `R1_target_file` and `R2_target_file` columns point to the correct FastQ files for the library (i.e. consistent with SSF file).
+  - [ ] I confirm that the `udg`, `library_built` columns are correct for each library.
+  - [ ] I confirm that the `R1_target_file` and `R2_target_file` columns point to the correct FastQ files for the library (i.e. consistent with SSF file).
 
 ### Package config file (`*config`)
 The template config file includes a few TODO statements, and information about them. Please ensure that you:
-  - [ ] Select the appropriate config for the CaptureType of the package.
-  - [ ] If any nf-core/eager parameters need to be altered from their defaults, add them at the end of the `params` section of the config file.
+  - [ ] I have selected the appropriate config for the CaptureType of the package.
+  - [ ] If any nf-core/eager parameters need to be altered from their defaults, I have added them within the `params` section at the end of the package config file.

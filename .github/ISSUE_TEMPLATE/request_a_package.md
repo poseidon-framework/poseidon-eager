@@ -18,16 +18,17 @@ I have checked the following places for the requested package and could not find
 
 - [ ] Poseidon Package Directory
 - [ ] The `packages/` directory in this repository
+- [ ] Open issues in this repository
 - [ ] Open pull requests in this repository
 
 <!--
-TODO: Please confirm that you checked the resources listed above to ensure that the requested packagedoes not already exist under a different name than you expected.
+TODO: Please confirm that you checked the resources listed above to ensure that the requested package does not already exist under a different name than you expected.
 -->
 
 ## Required information for the package
 
-- DOI of publication: https://doi.org/10.1038/s41467-018-07483-5
-- Project accession number: [PRJEB29360](https://www.ebi.ac.uk/ena/data/view/PRJEB29360)
+- DOI of publication: https://doi.org/10.1038/s41467-018-07483-5 <- Please replace this example DOI with the one for the relevant publication
+- Project accession number: [PRJEB29360](https://www.ebi.ac.uk/ena/data/view/PRJEB29360) <- Please replace this example ENA project link with the one for the relevant publication
 
 <!--
 TODO: Please replace the DOI and the study accession (and URL to the public sequencing data repository) above with the relevant information for the requested package

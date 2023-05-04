@@ -15,13 +15,13 @@ Please ensure you are completing all the TODOs outlined in these comments for ea
 
 ## Which package needs changes?
 
-Package name: `2018_Lamnidis_Fennoscandia`
+Package name: `2018_Lamnidis_Fennoscandia` <- Replace the package name here with the name of the relevant package.
 
 <!-- TODO: Please Specify the name of the package you think needs updating -->
 
 ## Check for upcoming changes
 
-I confirm there are no changes already suggested for this package in, or they do not address my issue:
+I confirm there are no changes already suggested for this package that address my issue in:
 
 - [ ] [Open Pull Requests](https://github.com/poseidon-framework/poseidon-eager/pulls)
 - [ ] [Open Issues](https://github.com/poseidon-framework/poseidon-eager/issues)
@@ -38,13 +38,13 @@ TODO: Please describe what you would like to see changed in the poseidon package
 Are there some data/individuals missing? Do you disagree with the nf-core/parameters used? The more information you provide here, the better.
 -->
 
-## What are the changes you'd like?
+## (optional) What are the changes you'd like?
 
 <!-- 
 TODO: If you have a specific parameter that you would like to see changed, please list it here. Otherwise you can leave this section empty.
 -->
 
-## How did you realise something needs updating?
+## (optional) How did you realise something needs updating?
 
 <!-- 
 TODO: If you came across an error with the Poseidon package resulting from this processing while running some analysis, please give information that might help us reproduce the problems here.

@@ -1,14 +1,14 @@
 name: Create additional PR files
 on:
   issue_comment:
-    types: [created, edited]
+    types: [created]
 
 jobs:
   deploy:
     # Only run if comment is on a PR with the main repo, and if it contains the magic keywords
     if: >
       contains(github.event.comment.html_url, '/pull/') &&
-      contains(github.event.comment.body, '@delphis-bot create backbone') &&
+      startsWith(github.event.comment.body, '@delphis-bot create backbone') &&
       github.repository == 'poseidon-framework/poseidon-eager'
     runs-on: ubuntu-latest
     steps:
@@ -87,6 +87,7 @@ jobs:
         run: |
           for package_name in ${{ steps.get_package_names.outputs.package_names }}; do
             cp ./assets/template.tsv_patch.sh ./packages/${package_name}/${package_name}.tsv_patch.sh
+            chmod +x ./packages/${package_name}/${package_name}.tsv_patch.sh
           done
 
       - name: Commit & push changes

@@ -1,3 +1,6 @@
+raw_sequencing_data/
 eager/
 .nextflow*
 *.finalised.tsv
+array_Logs/
+array_tempfiles/

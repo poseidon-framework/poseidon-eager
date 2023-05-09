@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail ## Pipefail, complain on new unassigned variables.
-VERSION='0.2.0dev'
+VERSION='0.2.1dev'
 ## Load helper bash functions
 source $(dirname ${0})/source_me.sh
 
@@ -38,6 +38,7 @@ let lib_built_col=$(get_index_of 'library_built' "${ssf_header[@]}")+1
 
 poseidon_ids=()
 library_ids=()
+let missing_fastq_count=0
 
 while read line; do
   poseidon_id=$(echo "${line}" | awk -F "\t" -v X=${pid_col} '{print $X}')
@@ -45,6 +46,13 @@ while read line; do
   fastq_fn=$(echo "${line}" | awk -F "\t" -v X=${fastq_col} '{print $X}')
   library_built_field=$(echo "${line}" | awk -F "\t" -v X=${lib_built_col} '{print $X}')
   library_built=$(infer_library_strandedness ${library_built_field} 0)
+
+  ## If there is no FastQ file for this entry, skip it.
+  if [[ -z ${fastq_fn} ]]; then
+    ## Count the number of entries without a FastQ file
+    let missing_fastq_count+=1
+    continue
+  fi
 
   ## One set of sequencing data can correspond to multiple poseidon_ids
   for index in $(seq 1 1 $(number_of_entries ';' ${poseidon_id})); do
@@ -79,6 +87,11 @@ while read line; do
   done
 
 done < <(tail -n +2 ${ssf_file})
+
+## If there are missing FastQ files, warn the user.
+if [[ ${missing_fastq_count} -gt 0 ]]; then
+  errecho -y "${script_debug_string} There are ${missing_fastq_count} entries in the SSF file without a FastQ file.\n\tThese entries have been ignored."
+fi
 
 ## Keep track of versions
 version_file="$(dirname ${ssf_file})/script_versions.txt"

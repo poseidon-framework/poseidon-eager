@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -o pipefail ## Pipefail, complain on new unassigned variables.
 
-VERSION='0.2.0dev'
+VERSION='0.2.1dev'
 
 ## Helptext function
 function Helptext() {
@@ -58,10 +58,11 @@ ${repo_dir}/scripts/download_ena_data.py -d ${package_dir} -o ${download_dir} 2>
 check_fail $? "${script_debug_string} Downloads did not finish completely. Try again."
 
 ## STEP 2: Validate downloaded files.
+mkdir -p ${symlink_dir}
 ${repo_dir}/scripts/validate_downloaded_data.sh ${ssf_file} ${local_data_dir} ${symlink_dir}
 check_fail $? "${script_debug_string} Validation and symlink creation failed."
 
 ## STEP 3: Localise TSV file.
 errecho -y "${script_debug_string} Localising TSV for nf-core/eager."
-${tsv_patch_fn} ${local_data_dir} ${original_tsv}
+${tsv_patch_fn} ${symlink_dir} ${original_tsv}
 check_fail $? "${script_debug_string} TSV localisation failed."

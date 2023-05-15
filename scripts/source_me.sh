@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-HELPER_FUNCTION_VERSION='0.2.0dev'
+HELPER_FUNCTION_VERSION='0.2.1dev'
 
 ## Print coloured messages to stderr
 #   errecho -r will print in red
@@ -357,7 +357,7 @@ function infer_colour_chemistry() {
   ## Hard-coded list of sequencers per colour chemistry
   one_chem_seqs=("Illumina iSeq 100") ## Not sure eager can process this, but good to have a record of it.
   two_chem_seqs=("NextSeq 1000" "NextSeq 500" "NextSeq 550" "Illumina NovaSeq 6000" "Illumina MiniSeq")
-  four_chem_seqs=("Illumina HiSeq 1000" "Illumina HiSeq 1500" "Illumina HiSeq 2000" "Illumina HiSeq 2500" "Illumina HiSeq 3000" "Illumina HiSeq 4000" "HiSeq X Five" "HiSeq X Ten" "Illumina Genome Analyzer" "Illumina Genome Analyzer II" "Illumina Genome Analyzer IIx" "Illumina HiScanSQ" "Illumina MiSeq")
+  four_chem_seqs=("Illumina HiSeq 1000" "Illumina HiSeq 1500" "Illumina HiSeq 2000" "Illumina HiSeq 2500" "Illumina HiSeq 3000" "Illumina HiSeq 4000" "Illumina HiSeq X" "HiSeq X Five" "HiSeq X Ten" "Illumina Genome Analyzer" "Illumina Genome Analyzer II" "Illumina Genome Analyzer IIx" "Illumina HiScanSQ" "Illumina MiSeq")
   colour_chemistry=''
 
   ## Throw an error if sequencer is not ILLUMINA

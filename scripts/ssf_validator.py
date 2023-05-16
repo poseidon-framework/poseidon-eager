@@ -13,18 +13,20 @@ import argparse
 def read_ssf_file(file_name, required_fields=None, error_counter=0):
     l = file_name.readlines()
     headers = l[0].split()
+    global SSF_HEADER ## Pull header out of function scope
+    SSF_HEADER = headers
     if required_fields:
         for field in required_fields:
             if field not in headers:
                 error_counter = print_error(
-                    "Required field '{}' not found in header!".format(field), "", "", error_counter
+                    "[Missing required field] Required field '{}' not found in header! Cannot validate non-existing entries.".format(field), "", "", error_counter
                 )
         if error_counter > 0:
             print(
-                "[Column existence check] {} formatting error(s) were detected in the input SSF file.".format(error_counter)
+                "[Formatting check] {} column existence error(s) were detected in the input SSF file. Ensure all required columns are present and retry validation.\nRequired columns:\n\t{}".format(error_counter, "\n\t".join(required_fields))
             )
             sys.exit(1)
-    return map(lambda row: dict(zip(headers, row.split('\t'))), l[1:])
+    return map(lambda row: dict(zip(headers, row.strip().split('\t'))), l[1:])
 
 
 def isNAstr(var):
@@ -65,19 +67,28 @@ def print_error(error, context="Line", context_str="", error_counter=0):
     return error_counter
 
 
+def complain_about_spaces(row_entries, error_counter, line_num):
+    for key in row_entries.keys():
+        if row_entries[key].startswith(" ") or row_entries[key].endswith(" "):
+            error_counter = print_error(
+                "[Spacing found in TSV entries] SSF entries cannot start or end with whitespace.", "Line", line_num, error_counter
+            )
+    return error_counter
+
+
 def validate_poseidon_ids(poseidon_ids, error_counter, line_num):
     ## Poseidon IDs should not end in ';'
-    ##   If a list, the `;` will be within the field, not at the end. If a single value, it should not have `;` at all.
-    if poseidon_ids.endswith(";"):
-        error_counter = print_error("poseidon_ids cannot end in ';'.", "Line", line_num, error_counter)
+    ##   If a list, the `;` will be within the field, not at the end or start. If a single value, it should not have `;` at all.
+    if poseidon_ids.endswith(";") or poseidon_ids.startswith(";"):
+        error_counter = print_error("[Invalid poseidon_IDs formatting] poseidon_ids cannot start or end in ';'.", "Line", line_num, error_counter)
 
     ## Poseidon IDs cannot be missing or 'n/a'
     if not poseidon_ids:
-        error_counter = print_error("poseidon_ids entry has not been specified!", "Line", line_num, error_counter)
+        error_counter = print_error("[Poseidon_ID missing] poseidon_ids entry has not been specified!", "Line", line_num, error_counter)
     elif isNAstr(poseidon_ids):
-        error_counter = print_error("poseidon_ids cannot be 'n/a'!", "Line", line_num, error_counter)
+        error_counter = print_error("[Poseidon_ID missing] poseidon_ids cannot be 'n/a'!", "Line", line_num, error_counter)
     
-    return(error_counter)
+    return error_counter
 
 
 def validate_instrument_model(instrument_model, error_counter, line_num):
@@ -107,7 +118,7 @@ def validate_instrument_model(instrument_model, error_counter, line_num):
 
     if instrument_model not in two_chem_seqs + four_chem_seqs:
         error_counter = print_error(
-            "instrument_model '{}' is not recognised as one that can be processed with nf-core/eager. Options: {}".format(
+            "[Invalid instrument_model formatting] instrument_model '{}' is not recognised as one that can be processed with nf-core/eager. Accepted values: {}".format(
                 instrument_model,
                 ", ".join(two_chem_seqs + four_chem_seqs)
             ),
@@ -115,6 +126,7 @@ def validate_instrument_model(instrument_model, error_counter, line_num):
             line_num,
             error_counter,
         )
+    return error_counter
 
 
 def validate_ssf(file_in):
@@ -150,30 +162,40 @@ def validate_ssf(file_in):
             "read_count",
             "submitted_ftp"
         ]
+        REQUIRED_FIELDS = [
+            "poseidon_IDs",
+            "udg",
+            "library_built",
+            "instrument_model",
+            "instrument_platform",
+            "library_name",
+            "fastq_ftp",
+        ]
 
         ## Check entries
-        for line_num, ssf_entry in enumerate(read_ssf_file(fin)):
+        for line_num, ssf_entry in enumerate(read_ssf_file(fin, required_fields=REQUIRED_FIELDS)):
             line_num += 2  ## From 0-based to 1-based. Add an extra 1 for the header line
 
             # Check valid number of columns per row
-            if len(ssf_entry) < len(HEADER):
+            # for key in ssf_entry.keys():
+            #     print(key, "=", ssf_entry[key])
+            # print(ssf_entry)
+            if len(ssf_entry) < len(SSF_HEADER):
                 error_counter = print_error(
-                    "Invalid number of columns (minimum = {})!".format(len(HEADER)), "Line", line_num, error_counter
+                    "[Missing columns in row] Invalid number of columns (expected {}, got {})!".format(len(SSF_HEADER), len(ssf_entry)), "Line", line_num, error_counter
                 )
-            ## Check number of non n/a columns per row
-            num_cols = len([x for x in ssf_entry if x])
-            if num_cols < MIN_COLS:
-                error_counter = print_error(
-                    "Invalid number of populated columns (minimum = {})!".format(MIN_COLS), "Line", line_num, error_counter
-                )
+
+            ## Check for spaces in entries
+            error_counter = complain_about_spaces(ssf_entry, error_counter, line_num)
 
             ## Validate poseidon IDs
-            validate_poseidon_ids(ssf_entry["poseidon_IDs"], error_counter, line_num)
+            error_counter = validate_poseidon_ids(ssf_entry["poseidon_IDs"], error_counter, line_num)
 
             ## Validate UDG
+            # print(ssf_entry["udg"])
             if ssf_entry["udg"] not in ["minus", "half", "plus"]:
                 error_counter = print_error(
-                    "udg entry is not recognised. Options: minus, half, plus.",
+                    "[Invalid udg formatting] udg entry '{}' is not recognised. Options: minus, half, plus.".format(ssf_entry["udg"]),
                     "Line",
                     line_num,
                     error_counter,
@@ -182,19 +204,19 @@ def validate_ssf(file_in):
             ## Validate library_built
             if ssf_entry["library_built"] not in ["ds", "ss"]:
                 error_counter = print_error(
-                    "library_built entry is not recognised. Options: ds, ss.",
+                    "[Invalid library_built formatting] library_built entry '{}' is not recognised. Options: ds, ss.".format(ssf_entry["library_built"]),
                     "Line",
                     line_num,
                     error_counter,
                 )
             
             ## Validate instrument_model
-            validate_instrument_model(ssf_entry["instrument_model"], error_counter, line_num)
+            error_counter = validate_instrument_model(ssf_entry["instrument_model"], error_counter, line_num)
 
             ## Validate instrument_platform
             if ssf_entry["instrument_platform"] not in ["ILLUMINA"]:
                 error_counter = print_error(
-                    "instrument_platform entry is not recognised. Options: ILLUMINA.",
+                    "[Invalid instrument_platform] instrument_platform entry '{}' is not recognised. Options: ILLUMINA.".format(ssf_entry["instrument_platform"]),
                     "Line",
                     line_num,
                     error_counter,
@@ -202,18 +224,18 @@ def validate_ssf(file_in):
 
             ## Validate library_name
             if not ssf_entry["library_name"]:
-                error_counter = print_error("library_name entry has not been specified!", "Line", line_num, error_counter)
+                error_counter = print_error("[Library_name missing] library_name entry has not been specified!", "Line", line_num, error_counter)
             elif isNAstr(ssf_entry["library_name"]):
-                error_counter = print_error("library_name cannot be 'n/a'!", "Line", line_num, error_counter)
+                error_counter = print_error("[Library_name missing] library_name cannot be 'n/a'!", "Line", line_num, error_counter)
 
             ## Validate fastq_ftp
             for reads in [ ssf_entry["fastq_ftp"] ]:
                 ## Can be empty string in some cases where input is a BAM, but then data won't be processes (atm)
                 if isNAstr(reads):
-                    error_counter = print_error("fastq_ftp cannot be 'n/a'!", "Line", line_num, error_counter)
+                    error_counter = print_error("[Fastq_ftp is 'n/a'] fastq_ftp cannot be 'n/a'!", "Line", line_num, error_counter)
                 elif reads.find(" ") != -1:
                         error_counter = print_error(
-                            "File names cannot contain spaces! Please rename.", "Line", line_num, error_counter
+                            "[Spaces in FastQ name] File names cannot contain spaces! Please rename.", "Line", line_num, error_counter
                         )
                 ## Check that the fastq_ftp entry ends with a valid extension
                 elif (
@@ -224,7 +246,7 @@ def validate_ssf(file_in):
                     and not reads == ""
                 ):
                     error_counter = print_error(
-                        "FASTQ file(s) have unrecognised extension. Allowed extensions: .fastq.gz, .fq.gz, .fastq, .fq!",
+                        "[Invalid FastQ file extension] FASTQ file(s) have unrecognised extension. Allowed extensions: .fastq.gz, .fq.gz, .fastq, .fq!",
                         "Line",
                         line_num,
                         error_counter,

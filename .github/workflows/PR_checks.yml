@@ -41,8 +41,8 @@ jobs:
 
           ## Validate contents of each SSF file.
           for ssf_fn in ${ssf_files}; do
-            echo "Validating ${ssf_file}"
-            python scripts/ssf_validator --ssf-path ${ssf_fn}
+            echo "Validating: '${ssf_fn}'"
+            python scripts/ssf_validator.py --ssf-path ${ssf_fn}
           done
         env:
           GITHUB_TOKEN: ${{ secrets.delphis_bot_auth_token }}

@@ -15,7 +15,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
       
-      # Action runs on the issue comment, so we don't get the PR by default
       # Use the gh cli to check out the PR
       - name: Checkout Pull Request
         run: gh pr checkout ${{ github.event.pull_request.number }}
@@ -38,7 +37,7 @@ jobs:
           ssf_files=''
           while read r; do
             ssf_files+="${r} "
-          done < <( gh api /repos/poseidon-framework/poseidon-eager/pulls/${{ github.event.issue.number }}/files -q '.[].filename' | grep '.ssf$' )
+          done < <( gh api /repos/poseidon-framework/poseidon-eager/pulls/${{ github.event.pull_request.number }}/files -q '.[].filename' | grep '.ssf$' )
 
           ## Validate contents of each SSF file.
           for ssf_fn in ${ssf_files}; do

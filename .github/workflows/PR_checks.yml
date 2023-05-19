@@ -25,12 +25,7 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: 3.10.11
-        
-      # - name: Install dependencies
-      #   run: |
-      #     python -m pip install --upgrade pip
-      #     pip install argparse
-        
+      
       - name: Check SSF
         run: |
           ## Collect all ssf files edited by the PRs
@@ -42,7 +37,7 @@ jobs:
           ## Validate contents of each SSF file.
           for ssf_fn in ${ssf_files}; do
             echo "Validating: '${ssf_fn}'"
-            python scripts/ssf_validator.py --ssf-path ${ssf_fn}
+            python scripts/ssf_validator.py ${ssf_fn}
           done
         env:
           GITHUB_TOKEN: ${{ secrets.delphis_bot_auth_token }}

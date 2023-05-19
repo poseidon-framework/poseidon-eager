@@ -44,3 +44,5 @@ jobs:
             echo "Validating ${ssf_file}"
             python scripts/ssf_validator --ssf-path ${ssf_fn}
           done
+        env:
+          GITHUB_TOKEN: ${{ secrets.delphis_bot_auth_token }}

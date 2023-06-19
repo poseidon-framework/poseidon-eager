@@ -15,11 +15,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v3
 
-      # Use the gh cli to check out the PR
-      - name: Checkout Pull Request
-        run: gh pr checkout ${{ github.event.pull_request.number }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.delphis_bot_auth_token }}
+      # # Use the gh cli to check out the PR
+      # - name: Checkout Pull Request
+      #   run: gh pr checkout ${{ github.event.pull_request.number }}
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.delphis_bot_auth_token }}
 
       - name: Setup Python
         uses: actions/setup-python@v2
@@ -42,5 +42,5 @@ jobs:
             echo "Validating: '${ssf_fn}'"
             python scripts/ssf_validator.py ${ssf_fn}
           done
-        env:
-          GITHUB_TOKEN: ${{ secrets.delphis_bot_auth_token }}
+        # env:
+        #   GITHUB_TOKEN: ${{ secrets.delphis_bot_auth_token }}

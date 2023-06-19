@@ -32,6 +32,7 @@ jobs:
         run: gh pr checkout ${{ github.event.issue.number }}
         env:
           GITHUB_TOKEN: ${{ secrets.delphis_bot_auth_token }}
+          GH_TOKEN: ${{ secrets.delphis_bot_auth_token }}
 
       - uses: actions/setup-node@v3
 
@@ -54,6 +55,7 @@ jobs:
           echo "package_names=${package_names% }" >>$GITHUB_OUTPUT
         env:
           GITHUB_TOKEN: ${{ secrets.delphis_bot_auth_token }}
+          GH_TOKEN: ${{ secrets.delphis_bot_auth_token }}
         
       - name: Post comment listing offending packages
         if: steps.get_package_names.outputs.offending_ssfs != ''

@@ -34,7 +34,7 @@ jobs:
         run: |
           echo "PR base sha: ${{ github.event.pull_request.base.sha }}"
           echo "PR head sha: ${{ github.sha }}"
-          echo "$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep '.ssf$')" >> $GITHUB_OUTPUT
+          echo "ssf=$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep '.ssf$')" >> $GITHUB_OUTPUT
 
       - name: Check SSF
         if: ${{ steps.changes.outputs.ssf }}

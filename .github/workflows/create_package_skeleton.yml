@@ -19,20 +19,20 @@ jobs:
         with:
           comment-id: ${{ github.event.comment.id }}
           reactions: eyes
-          token: ${{ secrets.delphis_bot_auth_token }}
+          token: ${{ secrets.DELPHIS_BOT_AUTH_TOKEN }}
 
       # Use the @delphis-bot token to check out so we can push later
       - uses: actions/checkout@v3
         with:
-          token: ${{ secrets.delphis_bot_auth_token }}
+          token: ${{ secrets.DELPHIS_BOT_AUTH_TOKEN }}
 
       # Action runs on the issue comment, so we don't get the PR by default
       # Use the gh cli to check out the PR
       - name: Checkout Pull Request
         run: gh pr checkout ${{ github.event.issue.number }}
         env:
-          GITHUB_TOKEN: ${{ secrets.delphis_bot_auth_token }}
-          GH_TOKEN: ${{ secrets.delphis_bot_auth_token }}
+          GITHUB_TOKEN: ${{ secrets.DELPHIS_BOT_AUTH_TOKEN }}
+          GH_TOKEN: ${{ secrets.DELPHIS_BOT_AUTH_TOKEN }}
 
       - uses: actions/setup-node@v3
 
@@ -54,15 +54,15 @@ jobs:
           echo "offending_ssfs=${offending_ssfs% }" >>$GITHUB_OUTPUT
           echo "package_names=${package_names% }" >>$GITHUB_OUTPUT
         env:
-          GITHUB_TOKEN: ${{ secrets.delphis_bot_auth_token }}
-          GH_TOKEN: ${{ secrets.delphis_bot_auth_token }}
+          GITHUB_TOKEN: ${{ secrets.DELPHIS_BOT_AUTH_TOKEN }}
+          GH_TOKEN: ${{ secrets.DELPHIS_BOT_AUTH_TOKEN }}
         
       - name: Post comment listing offending packages
         if: steps.get_package_names.outputs.offending_ssfs != ''
         uses: peter-evans/create-or-update-comment@v2
         with:
           issue-number: ${{ github.event.issue.number }}
-          token: ${{ secrets.delphis_bot_auth_token }}
+          token: ${{ secrets.DELPHIS_BOT_AUTH_TOKEN }}
           body: |
             SSF files MUST be named after their respective package. The following SSF files break this rule:
               ${{ steps.get_package_names.outputs.offending_ssfs }}

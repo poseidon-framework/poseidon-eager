@@ -19,8 +19,8 @@ jobs:
       - name: Checkout Pull Request
         run: gh pr checkout ${{ github.event.pull_request.number }}
         env:
-          GITHUB_TOKEN: ${{ secrets.DELPHIS_BOT_AUTH_TOKEN }}
-          GH_TOKEN: ${{ secrets.DELPHIS_BOT_AUTH_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.delphis_bot_auth_token }}
+          GH_TOKEN: ${{ secrets.delphis_bot_auth_token }}
       
       - name: Setup Python
         uses: actions/setup-python@v2
@@ -41,6 +41,4 @@ jobs:
             python scripts/ssf_validator.py ${ssf_fn}
           done
         env:
-          GITHUB_TOKEN: ${{ secrets.DELPHIS_BOT_AUTH_TOKEN }}
-          GH_TOKEN: ${{ secrets.DELPHIS_BOT_AUTH_TOKEN }}
-
+          GITHUB_TOKEN: ${{ secrets.delphis_bot_auth_token }}

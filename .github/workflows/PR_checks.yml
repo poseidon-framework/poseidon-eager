@@ -35,15 +35,10 @@ jobs:
       - name: Check SSF
         if: ${{ steps.changes.outputs.ssf }}
         run: |
-          echo "Changed files: ${{ steps.changes.outputs.ssf }}"
-          ## Collect all ssf files edited by the PRs
-          ssf_files=''
-          while read r; do
-            ssf_files+="${r} "
-          done < echo "${{ steps.changes.outputs.ssf }}"
+          echo "Validating: ${{ steps.changes.outputs.ssf }}"
 
           ## Validate contents of each SSF file.
-          for ssf_fn in ${ssf_files}; do
+          for ssf_fn in ${{ steps.changes.outputs.ssf }}; do
             echo "Validating: '${ssf_fn}'"
             python scripts/ssf_validator.py ${ssf_fn}
           done

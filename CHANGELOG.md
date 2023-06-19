@@ -21,6 +21,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - @delphis-bot now only triggered on new PR comment, not edits.
 - Propagate versions of all config files used in nf-core/eager runs to `config_profile_description`.
 - `scripts/download_and_localise_package_files.sh` is a wrapper script that does all the steps of getting a package backbone ready for eagering. Quality of life script for testing, but will be superceded soon.
+- Added `scripts/ssf_validator.py`.
 
 ### `Fixed`
 

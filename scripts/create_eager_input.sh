@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-VERSION='0.2.0dev'
+VERSION='0.2.1dev'
 set -o pipefail ## Pipefail, complain on new unassigned variables.
 
 ## Helptext function
@@ -95,6 +95,7 @@ let lib_udg_col=$(get_index_of 'udg' "${ssf_header[@]}")+1
 ## Keep track of observed values
 poseidon_ids=()
 library_ids=()
+let missing_fastq_count=0
 
 ## Paste together stuff to make a TSV. Header will flush older tsv if it exists.
 errecho -y "[${package_name}] Creating TSV input for nf-core/eager (v2.*)."
@@ -112,6 +113,13 @@ while read line; do
   ## in the ssf file, these fields should correspond to single fastQ, so they should never be list values anymore.
   library_built=$(infer_library_strandedness ${library_built_field} 0)
   udg_treatment=$(infer_library_udg ${udg_treatment_field} 0)
+
+  ## If there is no FastQ file for this entry, skip it.
+  if [[ -z ${fastq_fn} ]]; then
+    ## Count the number of entries without a FastQ file
+    let missing_fastq_count+=1
+    continue
+  fi
 
   ## One set of sequencing data can correspond to multiple poseidon_ids
   for index in $(seq 1 1 $(number_of_entries ';' ${poseidon_id})); do
@@ -139,6 +147,12 @@ while read line; do
   done
 
 done < <(tail -n +2 ${ena_table})
+
+## Print warning if there are lines with missing FastQ files
+if [[ ${missing_fastq_count} -gt 0 ]]; then
+  errecho -y "[${package_name}] There are ${missing_fastq_count} entries in the SSF file without a FastQ file.\n\tThese entries have been ignored."
+fi
+
 errecho -y "[${package_name}] TSV creation completed"
 
 ## Keep track of versions

@@ -8,39 +8,36 @@ on:
 jobs:
   ssf_validation:
     name: Validate SSF
+    ## Run on PRs that contain the right label
     if: contains(github.event.pull_request.labels.*.name, 'new package') || contains(github.event.pull_request.labels.*.name, 'package update')
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v3
       
-      # Action runs on the issue comment, so we don't get the PR by default
       # Use the gh cli to check out the PR
-      - name: Checkout Pull Request
-        run: gh pr checkout ${{ github.event.issue.number }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.delphis_bot_auth_token }}
+      # - name: Checkout Pull Request
+      #   run: gh pr checkout ${{ github.event.pull_request.number }}
+      #   env:
+      #     GITHUB_TOKEN: ${{ secrets.delphis_bot_auth_token }}
       
       - name: Setup Python
         uses: actions/setup-python@v2
         with:
           python-version: 3.10.11
-        
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install os sys errno argparse
-        
+      
       - name: Check SSF
         run: |
           ## Collect all ssf files edited by the PRs
           ssf_files=''
           while read r; do
             ssf_files+="${r} "
-          done < <( gh api /repos/poseidon-framework/poseidon-eager/pulls/${{ github.event.issue.number }}/files -q '.[].filename' | grep '.ssf$' )
+          done < <( gh api /repos/poseidon-framework/poseidon-eager/pulls/${{ github.event.pull_request.number }}/files -q '.[].filename' | grep '.ssf$' )
 
           ## Validate contents of each SSF file.
           for ssf_fn in ${ssf_files}; do
-            echo "Validating ${ssf_file}"
-            python scripts/ssf_validator --ssf-path ${ssf_fn}
+            echo "Validating: '${ssf_fn}'"
+            python scripts/ssf_validator.py ${ssf_fn}
           done
+        # env:
+        #   GITHUB_TOKEN: ${{ secrets.delphis_bot_auth_token }}

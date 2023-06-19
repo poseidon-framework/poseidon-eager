@@ -4,3 +4,6 @@ eager/
 *.finalised.tsv
 array_Logs/
 array_tempfiles/
+testing_assets/
+poseidon_packages/
+.tmp/

@@ -32,7 +32,7 @@ jobs:
         id: changes
         # Set outputs using the command.
         run: |
-          echo "$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep '.ssf$' | xargs)" >> $GITHUB_OUTPUT
+          echo "$(git diff --name-only --diff-filter=ACMRT ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep '.ssf$')" >> $GITHUB_OUTPUT
 
       - name: Check SSF
         if: ${{ steps.changes.outputs.ssf }}

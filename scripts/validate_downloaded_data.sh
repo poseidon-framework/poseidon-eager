@@ -12,8 +12,16 @@ function Helptext() {
   echo -ne "-v, --version\t\tPrint version and exit.\n"
 }
 
-## Show helptext and exist if no arguments are provided
-if [[ ${#@} -lt 3 ]] || [[ $1 == '-h' || $1 == '--help' ]]; then
+## Show helptext and exit if no arguments are provided
+if [[ ${#@} -eq 0 ]]; then
+  Helptext
+  exit 0
+fi
+
+if [[ ${1} == '-v' || ${1} == '--version' ]]; then
+  echo "validate_downloaded_data.sh version: ${VERSION}"
+  exit 0
+elif [[ ${1} == '-h' || ${1} == '--help' ]]; then
   Helptext
   exit 0
 fi

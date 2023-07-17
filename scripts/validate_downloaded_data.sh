@@ -1,8 +1,22 @@
 #!/usr/bin/env bash
 set -uo pipefail ## Pipefail, complain on new unassigned variables.
-VERSION='0.2.1dev'
+VERSION='0.2.2dev'
 ## Load helper bash functions
 source $(dirname ${0})/source_me.sh
+
+function Helptext() {
+  echo -ne "\t usage: ${0} [options] <ssf_fn> <download_dir> <symlink_dir> \n\n"
+  echo -ne "This validates that the md5sums for downloaded FastQ files match the ones in the SSF for the package, and creates symlinks for each line in the eager input TSV.\n\n"
+  echo -ne "Options:\n"
+  echo -ne "-h, --help\t\tPrint this text and exit.\n"
+  echo -ne "-v, --version\t\tPrint version and exit.\n"
+}
+
+## Show helptext and exist if no arguments are provided
+if [[ ${#@} -lt 3 ]] || [[ $1 == '-h' || $1 == '--help' ]]; then
+  Helptext
+  exit 0
+fi
 
 ssf_file=$(readlink -f ${1})
 download_dir=$(readlink -f ${2})

@@ -7,7 +7,7 @@ function Helptext() {
   echo -ne "\t usage: ${0} [options] Package_Minotaur_Directory\n\n"
   echo -ne "This script collects the genotype data and metadata from Minotaur-processing and creates/updates the requested poseidon package if needed.\n\n"
   echo -ne "Options:\n"
-  echo -ne "-d, --debug\t\Activates debug mode, and keeps temporary directories for troubleshooting.\n"
+  echo -ne "-d, --debug\t\tActivates debug mode, and keeps temporary directories for troubleshooting.\n"
   echo -ne "-h, --help\t\tPrint this text and exit.\n"
   echo -ne "-v, --version\t\tPrint version and exit.\n"
 }
@@ -82,7 +82,7 @@ function make_genotype_dataset_out_of_genotypes() {
       exit 1
     fi
 
-    ## Check that the genotype dataset has a consistent length across all snps.
+    ## Check that the genotype dataset has a consistent length across first and last snp.
     geno_top_length=$(bc <<< "$(head -n1 ${tempdir}/${out_name}.geno | wc -c | cut -f 1 -d ' ') - 1")
     geno_bot_length=$(bc <<< "$(tail -n1 ${tempdir}/${out_name}.geno | wc -c | cut -f 1 -d ' ') - 1")
     if [[ ${geno_top_length} != ${geno_bot_length} ]]; then
@@ -129,7 +129,8 @@ while true ; do
   case "$1" in
     -h|--help)          Helptext; exit 0 ;;
     -v|--version)       echo ${VERSION}; exit 0;;
-    --)                 package_minotaur_directory="${2}"; break ;;
+    -d|--debug)         errecho -y "[minotaur_packager.sh]: Debug mode activated."; set -x ; debug_mode=1; shift ;;
+    --)                 package_minotaur_directory="${2%/}"; break ;;
     *)                  echo -e "invalid option provided.\n"; Helptext; exit 1;;
   esac
 done
@@ -152,15 +153,18 @@ if [[ ! -f ${finalisedtsv_fn} ]]; then
 fi
 
 ## Quick sanity check that the minotaur run has completed (i.e. genotypes are not newer than multiQC).
-newest_genotype_fn=$(ls -Art -1 ${root_results_dir}/genotypes/*geno | tail -n 1) ## Reverse order and tail to avoid broken pipe errors
+newest_genotype_fn=$(ls -Art -1 ${root_results_dir}/genotyping/*geno | tail -n 1) ## Reverse order and tail to avoid broken pipe errors
 if [[ -z newest_genotype_fn && -f ${newest_genotype_fn} && ${root_results_dir}/multiqc/multiqc_report.html && ${newest_genotype_fn} -nt ${root_results_dir}/multiqc/multiqc_report.html ]]; then
   errecho -r "Minotaur run has not completed. Please ensure that processing has finished."
   exit 1
 fi
 
 ## Create a temporary directory to mix and rename the genotype datasets in.
+## 'tmp_dir' outside function, 'tempdir' in make_genotype_dataset_out_of_genotypes function
 tmp_dir=$(mktemp -d ${repo_dir}/.tmp/MNT_${package_name}.XXXXXXXXXX)
-genotype_fns=($(ls -1 ${root_results_dir}/genotypes/*geno)) ## List of genotype files.
+check_fail $? "[${package_name}]: Failed to create temporary directory. Aborting.\nCheck your permissions in ${repo_dir}, and that directory ${repo_dir}/.tmp exists."
+
+genotype_fns=($(ls -1 ${root_results_dir}/genotyping/*geno)) ## List of genotype files.
 
 ## Infer the SNP set from the config activated in the minotaur run from the config description.
 ##  A bit of a hack. Relies on the snp set being the exact name of the snp set profile in MINOTAUR, and the config version being in the second part of the config description (after first comma).
@@ -169,17 +173,26 @@ errecho -y "[${package_name}]: SNP set inferred as '${snp_set}'."
 
 ## Check that the inferred snp set is supported. Should trigger if the inference somehow breaks.
 supported_snpsets=($(ls -1 conf/CaptureType_profiles/ | cut -d "." -f 1))
-if [[ all_x_in_y 1 ${snp_set} ${#supported_snpsets[@]} ${supported_snpsets[@]} == '' ]]; then
+if [[ $(all_x_in_y 1 ${snp_set} ${#supported_snpsets[@]} ${supported_snpsets[@]}) != '' ]]; then
   errecho -r "[${package_name}]: Inferred SNP set '${snp_set}' is not supported. SNP set inference might have gone wrong."
   exit 1
 fi
 
+## If the package exists and the genotypes are not newer than the package, then print a message and do nothing.
+if [[ -d ${output_package_dir} ]] && [[ ${newest_genotype_fn} -nt ${output_package_dir}/${package_name}.geno ]]; then
+  errecho -y "[${package_name}]: Package is up to date."
+  exit 0
+
 ## If genotypes are new or the package does not exist, then create/update the package genotypes.
-if [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_package_dir}/${package_name}.geno ]]; then
+elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_package_dir}/${package_name}.geno ]]; then
   errecho -y "[${package_name}]: Genotypes are new or package does not exist. Creating/Updating package genotypes."
   make_genotype_dataset_out_of_genotypes "EIGENSTRAT" "${package_name}" "${tmp_dir}" ${genotype_fns[@]}
 
   ## Create a new package with the given genotypes.
-  trident init -p ${tempdir}/${package_name}.geno -o ${tempdir}/package/ -n ${package_name} --snpSet ${snp_set}
-elif [[ 1 ]]; then
+  trident init -p ${tmp_dir}/${package_name}.geno -o ${tmp_dir}/package/ -n ${package_name} --snpSet ${snp_set}
+  check_fail $? "[${package_name}]: Failed to initialise package. Aborting."
+
+  ## Partially fill empty fields in janno.
+# elif [[ 1 ]]; then
+  ## TODO Add package updating once that is needed. For now assum each package will be made once and that's it.
 fi

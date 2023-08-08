@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 VERSION='0.2.1dev'
 set -o pipefail ## Pipefail, complain on new unassigned variables.
+# set -x ## Debugging
 
 ## Helptext function
 function Helptext() {
@@ -104,6 +105,49 @@ function make_genotype_dataset_out_of_genotypes() {
   fi
 }
 
+## Helper function to pull minotaur versions from Config Profile Description and add them to a file.
+## usage add_versions_file <package_eager_result_dir> <version_fn>
+## Will create a file with the following information:
+##   nf-core/eager version
+##   Minotaur config version
+##   CaptureType config version
+##   Package config version
+##   Minotaur-packager version
+function add_versions_file() {
+  local package_eager_result_dir
+  local capture_type_config
+  local version_fn
+  local minotaur_version
+  local eager_version
+  local minotaur_versioning_string
+  local minotaur_version
+  local config_version
+  local capture_version
+  local pipeline_report_fn
+
+  ## Read in function params
+  package_eager_result_dir=${1}
+  version_fn=${2}
+
+  pipeline_report_fn=${package_eager_result_dir}/pipeline_info/pipeline_report.txt ## The pipeline report file from nf-core/eager
+
+  eager_version=$(grep "Pipeline Release:" ${pipeline_report_fn} | awk -F ":" '{print $NF}')
+  ## Config versioning is pulled from config description. Extract the actual dscription text into minotaur_versioning_string.
+  minotaur_versioning_string=$(grep "Config Profile Description:" ${pipeline_report_fn} | cut -d ':'  -f 2- )
+  ## For each version we want to keep, extract the version number from the minotaur_versioning_string.
+  minotaur_version=$(echo ${minotaur_versioning_string} | cut -d ',' -f 1 | cut -d ':' -f 2 | tr -d ' ')
+  capture_type_config=$(echo ${minotaur_versioning_string} | cut -d ',' -f 2 | cut -d ':' -f 1 | tr -d ' ')
+  capture_version=$(echo ${minotaur_versioning_string} | cut -d ',' -f 2 | cut -d ':' -f 2 | tr -d ' ')
+  config_version=$(echo ${minotaur_versioning_string} | cut -d ',' -f 4 | cut -d ':' -f 2 | tr -d ' ')
+
+  ## Create the versions file. Flush any old file contents if the file exists.
+  echo "nf-core/eager version: ${eager_version}"            >  ${version_fn}
+  echo "Minotaur config version: ${minotaur_version}"       >> ${version_fn}
+  echo "${capture_type_config} version: ${capture_version}" >> ${version_fn}
+  echo "Package config version: ${config_version}"          >> ${version_fn}
+  echo "Minotaur-packager version: ${VERSION}"              >> ${version_fn}
+}
+
 ## Parse CLI args.
 TEMP=`getopt -q -o dhv --long debug,help,version -n "${0}" -- "$@"`
 eval set -- "${TEMP}"
@@ -129,7 +173,7 @@ while true ; do
   case "$1" in
     -h|--help)          Helptext; exit 0 ;;
     -v|--version)       echo ${VERSION}; exit 0;;
-    -d|--debug)         errecho -y "[minotaur_packager.sh]: Debug mode activated."; set -x ; debug_mode=1; shift ;;
+    -d|--debug)         errecho -y "[minotaur_packager.sh]: Debug mode activated."; debug_mode=1; shift ;;
     --)                 package_minotaur_directory="${2%/}"; break ;;
     *)                  echo -e "invalid option provided.\n"; Helptext; exit 1;;
   esac
@@ -191,6 +235,33 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
   ## Create a new package with the given genotypes.
   trident init -p ${tmp_dir}/${package_name}.geno -o ${tmp_dir}/package/ -n ${package_name} --snpSet ${snp_set}
   check_fail $? "[${package_name}]: Failed to initialise package. Aborting."
+
+  ## Fill in janno
+  ## TODO Implementing reading of json stuff in python for more portability.
+
+  ## Validate the resulting package
+  trident validate -d ${tmp_dir}/package
+
+    ## Only move package dir to live output_dir if validation passed
+  if [[ $? == 0 ]] && [[ ${debug_mode} -ne 1 ]]; then
+    errecho "deleting stuff"
+  #   errecho -y "## Moving temp package to live ##"
+  #   ## Create directory for poseidon package if necessary (used to be trident could not create multiple dirs deep structure)
+  #   ##  Only created now to not trip up the script if execution did not run through fully.
+  #   mkdir -p $(dirname ${output_package_dir})
+
+  #   ## Add Minotaur versioning file to package
+  #   add_versions_file ${root_results_dir} ${tmp_dir}/package/versions.txt
+
+  #   ## Move package to live
+  #   mv ${tmp_dir}/package/ ${output_package_dir}/
+
+  #   ## Then remove temp files
+  #   errecho -y "## Removing temp directory ##"
+  #   ## Playing it safe by avoiding rm -r
+  #   rm ${tmp_dir}/*
+  #   rmdir ${tmp_dir}
+  fi
 
   ## Partially fill empty fields in janno.
 # elif [[ 1 ]]; then

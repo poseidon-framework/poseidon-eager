@@ -1,7 +1,8 @@
-raw_sequencing_data/
+raw_sequencing_data
 eager/
 .nextflow*
 *.finalised.tsv
 array_Logs/
 array_tempfiles/
 testing_assets/
+packages/

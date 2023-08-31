@@ -25,14 +25,21 @@ parser.add_argument('-v', '--version', action='version', version=VERSION)
 
 args = parser.parse_args()
 
+## Collect paths for analyses with multiple jsons.
 damageprofiler_json_paths=glob.glob(os.path.join(args.eager_result_dir, "damageprofiler", "*", "*.json"))
 endorspy_json_paths=glob.glob(os.path.join(args.eager_result_dir, "endorspy", "*.json"))
 snp_coverage_json_paths=glob.glob(os.path.join(args.eager_result_dir, "genotyping", "*.json"))
+
+## Collect paths for analyses with single json.
+sexdeterrmine_json_path=os.path.join(args.eager_result_dir, "sex_determination", "sexdeterrmine.json")
 nuclear_contamination_json_path=os.path.join(args.eager_result_dir, "nuclear_contamination", "nuclear_contamination_mqc.json")
 
+## Read in all JSONs into pandas DataFrames.
 damage_table=pyEager.wrappers.compile_damage_table(damageprofiler_json_paths)
 endogenous_table=pyEager.wrappers.compile_endogenous_table(endorspy_json_paths)
 snp_coverage_table=pyEager.wrappers.compile_snp_coverage_table(snp_coverage_json_paths)
 contamination_table=pyEager.parsers.parse_nuclear_contamination_json(nuclear_contamination_json_path)
+sex_determination_table=pyEager.parsers.parse_sexdeterrmine_json(sexdeterrmine_json_path)
+tsv_table=pyEager.parsers.parse_eager_tsv(args.eager_tsv_path)
 
-## TODO check tables above.
+## TODO Compile all tables appropriately to populate janno file.

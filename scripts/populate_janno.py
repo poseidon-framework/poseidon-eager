@@ -136,6 +136,8 @@ sex_determination_table = pyEager.parsers.parse_sexdeterrmine_json(
 )
 tsv_table = pyEager.parsers.parse_eager_tsv(args.eager_tsv_path)
 
-package_information = PoseidonYaml(args.poseidon_yml_path)
+## Read poseidon yaml, infer path to janno file and read janno file.
+poseidon_yaml_data = PoseidonYaml(args.poseidon_yml_path)
+janno_table = pd.read_table(poseidon_yaml_data.janno_file)
 
 ## TODO Compile all tables appropriately to populate janno file.

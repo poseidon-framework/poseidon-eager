@@ -6,6 +6,8 @@ import os
 import glob
 import pandas as pd
 import yaml
+import re
+import numpy as np
 from collections import namedtuple
 
 VERSION = "0.2.0dev"
@@ -14,6 +16,25 @@ VERSION = "0.2.0dev"
 def camel_to_snake(name):
     name = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
     return re.sub("([a-z0-9])([A-Z])", r"\1_\2", name).lower()
+
+
+def infer_library_name(row, prefix_col=None, target_col=None):
+    strip_me = "{}_".format(row[prefix_col])
+    from_me = row[target_col]
+
+    ## First, remove the added prefix
+    if from_me.startswith(strip_me):
+        inferred_name = from_me.replace(strip_me, "", 1)
+    else:
+        inferred_name = from_me
+
+    ## Finally, strip the hard-coded suffix if there.
+    if inferred_name.endswith("_ss"):
+        inferred_name = inferred_name.replace("_ss", "", 1)
+    else:
+        inferred_name = inferred_name
+
+    return inferred_name
 
 
 ## Function that takes a pd.DataFrame and the name of a column, and applies the format to it to add a new column named poseidon_id
@@ -63,6 +84,47 @@ class PoseidonYaml:
         self.genotype_data = GenotypeDict(**genotype_data)
 
 
+## Function to calculate weighted mean of a group from the weight and value columns specified.
+def weighted_mean(
+    group, wt_col="wt", val_col="val", filter_col="filter_col", min_val=100
+):
+    non_nan_indices = ~group[val_col].isna()
+    filter_indices = group[filter_col] >= min_val  ## Filter based on 'filter_col' >= 15
+    valid_indices = non_nan_indices & filter_indices
+
+    if valid_indices.any():
+        weighted_values = (
+            group.loc[valid_indices, wt_col] * group.loc[valid_indices, val_col]
+        )
+        total_weight = group.loc[
+            valid_indices, wt_col
+        ].sum()  # Calculate total weight without excluded weights
+        weighted_mean = weighted_values.sum() / total_weight
+    else:
+        weighted_mean = np.nan  # Return NaN if no valid values left
+
+    return weighted_mean
+
+
+def weighted_mean(group, wt_col="wt", val_col="val", min_val=100):
+    non_nan_indices = ~group[val_col].isna()
+    filtered_indices = group[val_col] >= min_val  ## Remove values below the cutoff
+    valid_indices = non_nan_indices & filtered_indices
+
+    if valid_indices.any():
+        weighted_values = (
+            group.loc[valid_indices, wt_col] * group.loc[valid_indices, val_col]
+        )
+        total_weight = group.loc[
+            valid_indices, wt_col
+        ].sum()  # Calculate total weight without excluded weights
+        weighted_mean = weighted_values.sum() / total_weight
+    else:
+        weighted_mean = np.nan  # Return NaN if no valid values left
+
+    return weighted_mean
+
+
 parser = argparse.ArgumentParser(
     prog="populate_janno",
     description="This script reads in different nf-core/eager result files and"
@@ -95,7 +157,6 @@ parser.add_argument(
 )
 parser.add_argument(
     "--safe",
-    metavar="<DIR>",
     action="store_true",
     help="Activate safe mode. The package's janno and ind files will not be updated, but instead new files will be created with the '.new' suffix. Only useful for testing.",
 )
@@ -134,10 +195,206 @@ contamination_table = pyEager.parsers.parse_nuclear_contamination_json(
 sex_determination_table = pyEager.parsers.parse_sexdeterrmine_json(
     sexdeterrmine_json_path
 )
+## TODO update pyEager tsv parser to add expected filename columns based on decisions inferred from TSV.
 tsv_table = pyEager.parsers.parse_eager_tsv(args.eager_tsv_path)
+tsv_table = pyEager.parsers.infer_merged_bam_names(
+    tsv_table, run_trim_bam=True, skip_deduplication=False
+)
 
 ## Read poseidon yaml, infer path to janno file and read janno file.
 poseidon_yaml_data = PoseidonYaml(args.poseidon_yml_path)
 janno_table = pd.read_table(poseidon_yaml_data.janno_file)
+## Add Main_ID to janno table. That is the Poseidon_ID after removing minotaur processing related suffixes.
+janno_table["Eager_ID"] = janno_table["Poseidon_ID"].str.replace(r"_MNT", "")
+janno_table["Main_ID"] = janno_table["Eager_ID"].str.replace(r"_ss", "")
 
 ## TODO Compile all tables appropriately to populate janno file.
+## Prepare damage table for joining. Infer eager Library_ID from id column, by removing '_rmdup.bam' suffix
+## TODO-dev Check if this is the correct way to infer Library_ID from id column when the results are on the sample level.
+damage_table["Library_ID"] = damage_table["id"].str.replace(r"_rmdup.bam", "")
+damage_table = damage_table[["Library_ID", "n_reads", "dmg_5p_1bp"]].rename(
+    columns={"dmg_5p_1bp": "damage"}
+)
+
+## Prepare endogenous table for joining. Should be max value in cases where multiple libraries are merged. But also, should be SG data ONLY, which is unlikely to work well with ENA datasets where TF and SG reads might be merged.
+## TODO-dev Decide on how to get keep only SG data. The SSF Could be used to filter.
+## NOTE: for now, endogenous DNA is ignored, as inference of SG/TF is difficult.
+endogenous_table = endogenous_table[["id", "endogenous_dna"]].rename(
+    columns={"id": "Library_ID", "endogenous_dna": "endogenous"}
+)
+
+## Prepare SNP coverage table for joining. Should always be on the sample level, so only need to fix column names.
+snp_coverage_table = snp_coverage_table.drop("Total_Snps", axis=1).rename(
+    columns={"id": "Sample_ID", "Covered_Snps": "Nr_SNPs"}
+)
+
+## Prepare contamination table for joining. Always at library level. Only need to fix column names here.
+contamination_table = contamination_table[
+    ["id", "Num_SNPs", "Method1_ML_estimate", "Method1_ML_SE"]
+].rename(
+    columns={
+        "id": "Library_ID",
+        "Num_SNPs": "Contamination_Nr_SNPs",
+        "Method1_ML_estimate": "Contamination_Est",
+        "Method1_ML_SE": "Contamination_SE",
+    }
+)
+contamination_table["Contamination_Est"] = pd.to_numeric(
+    contamination_table["Contamination_Est"], errors="coerce"
+)
+contamination_table["Contamination_SE"] = pd.to_numeric(
+    contamination_table["Contamination_SE"], errors="coerce"
+)
+
+## Prepare sex determination table for joining. Naming is sometimes at library and sometimes at sample-level, but results are always at sample level.
+sex_determination_table["bam"] = sex_determination_table["id"].str.replace(
+    r".*strand.bam", ""
+)  ## TODO this wont be needed once the tsv parser is updated.
+sex_determination_table = sex_determination_table[
+    ["id", "RateX", "RateY", "RateErrX", "RateErrY"]
+]
+
+## Merge all eager tables together (exclude endogenous for now).
+compound_eager_table = (
+    pd.DataFrame.merge(
+        tsv_table,
+        snp_coverage_table,
+        left_on="Sample_Name",
+        right_on="Sample_ID",
+        validate="many_to_one",
+    )
+    .merge(
+        ## Add contamination results per Library_ID
+        contamination_table,
+        on="Library_ID",
+        validate="many_to_one",
+    )
+    .merge(
+        ## Add 5p1 damage results per Library_ID
+        damage_table,
+        on="Library_ID",
+        validate="many_to_one",
+    )
+    .merge(
+        ## Add sex determination results per Sample_ID
+        sex_determination_table,
+        left_on="sexdet_bam_name",
+        right_on="id",
+        validate="many_to_one",
+    )
+    .drop(
+        ## Drop columns that are not relevant anymore
+        [
+            "Lane",
+            "Colour_Chemistry",
+            "SeqType",
+            "Organism",
+            "Strandedness",
+            "UDG_Treatment",
+            "R1",
+            "R2",
+            "BAM",
+            "initial_merge",
+            "additional_merge",
+            "strandedness_clash",
+            "initial_bam_name",
+            "additional_bam_name",
+            "sexdet_bam_name",
+            "Sample_ID",
+            "id",
+        ],
+        axis=1,
+    )
+    .drop_duplicates()
+)
+
+summarised_stats = pd.DataFrame()
+summarised_stats["Sample_Name"] = compound_eager_table["Sample_Name"].unique()
+summarised_stats = (
+    compound_eager_table.astype("string")
+    .groupby("Sample_Name")[["Contamination_Nr_SNPs"]]
+    .agg(
+        lambda x: "Nr Snps (per library): {}. Estimate and error are weighted means of values per library. Libraries with fewer than 100 SNPs used in contamination estimation were excluded.".format(
+            ";".join(x)
+        )
+    )
+    .rename(columns={"Contamination_Nr_SNPs": "Contamination_Note"})
+    .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
+)
+
+## Add library names
+compound_eager_table["Original_library_names"] = compound_eager_table.apply(
+    infer_library_name, axis=1, args=("Sample_Name", "Library_ID")
+)
+summarised_stats = (
+    compound_eager_table.groupby("Sample_Name")[["Original_library_names"]]
+    .agg(lambda x: ";".join(x))
+    .rename(columns={"Original_library_names": "Library_Names"})
+    .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
+)
+
+summarised_stats = (
+    compound_eager_table.groupby("Sample_Name")[["Library_ID"]]
+    .agg("nunique")
+    .rename(columns={"Library_ID": "Nr_Libraries"})
+    .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
+)
+
+summarised_stats = (
+    compound_eager_table.groupby("Sample_Name")[
+        ["Contamination_Nr_SNPs", "Contamination_Est", "Contamination_SE", "n_reads"]
+    ]
+    .apply(
+        weighted_mean,
+        wt_col="n_reads",
+        val_col="Contamination_Est",
+        filter_col="Contamination_Nr_SNPs",
+        min_val=100,
+    )
+    .reset_index("Sample_Name")
+    .rename(columns={0: "Contamination"})
+    .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
+)
+
+summarised_stats = (
+    compound_eager_table.groupby("Sample_Name")[
+        ["Contamination_Nr_SNPs", "Contamination_Est", "Contamination_SE", "n_reads"]
+    ]
+    .apply(
+        weighted_mean,
+        wt_col="n_reads",
+        val_col="Contamination_SE",
+        filter_col="Contamination_Nr_SNPs",
+        min_val=100,
+    )
+    .reset_index("Sample_Name")
+    .rename(columns={0: "Contamination_Err"})
+    .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
+)
+
+summarised_stats = (
+    compound_eager_table.groupby("Sample_Name")[["damage", "n_reads"]]
+    .apply(
+        weighted_mean,
+        wt_col="n_reads",
+        val_col="damage",
+        filter_col="n_reads",
+        min_val=0,
+    )  ## filter on n_reads >= 0, i.e. no filtering.
+    .reset_index("Sample_Name")
+    .rename(columns={0: "Damage"})
+    .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
+)
+
+final_eager_table = compound_eager_table.merge(
+    summarised_stats, on="Sample_Name", validate="many_to_one"
+).drop(
+    columns=[
+        "Library_ID",
+        "Contamination_Nr_SNPs",
+        "Contamination_Est",
+        "Contamination_SE",
+        "n_reads",
+        "damage",
+    ],
+)

@@ -203,7 +203,7 @@ tsv_table = pyEager.parsers.infer_merged_bam_names(
 
 ## Read poseidon yaml, infer path to janno file and read janno file.
 poseidon_yaml_data = PoseidonYaml(args.poseidon_yml_path)
-janno_table = pd.read_table(poseidon_yaml_data.janno_file)
+janno_table = pd.read_table(poseidon_yaml_data.janno_file, dtype=str)
 ## Add Main_ID to janno table. That is the Poseidon_ID after removing minotaur processing related suffixes.
 janno_table["Eager_ID"] = janno_table["Poseidon_ID"].str.replace(r"_MNT", "")
 janno_table["Main_ID"] = janno_table["Eager_ID"].str.replace(r"_ss", "")
@@ -396,5 +396,24 @@ final_eager_table = compound_eager_table.merge(
         "Contamination_SE",
         "n_reads",
         "damage",
+        "Original_library_names",
     ],
 )
+
+filled_janno_table = janno_table.merge(
+    final_eager_table, left_on="Eager_ID", right_on="Sample_Name"
+)
+## TODO-dev need to infer Genetic_Sex from 'RateX', 'RateY', 'RateErrX', 'RateErrY'
+for col in [
+    "Nr_SNPs",
+    "Damage",
+    "Contamination_Err",
+    "Contamination",
+    "Nr_Libraries",
+    "Contamination_Note",
+]:
+    filled_janno_table[col] = (
+        filled_janno_table[[col + "_x", col + "_y"]].bfill(axis=1).iloc[:, 0]
+    )
+
+filled_janno_table.replace(np.nan, "n/a", inplace=True)

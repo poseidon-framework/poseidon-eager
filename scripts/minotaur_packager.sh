@@ -122,7 +122,8 @@ function add_versions_file() {
   local minotaur_versioning_string
   local minotaur_version
   local config_version
-  local capture_version
+  local capture_type_version
+  local capture_type_version_string
   local pipeline_report_fn
 
   ## Read in function params
@@ -130,7 +131,6 @@ function add_versions_file() {
   version_fn=${2}
 
   pipeline_report_fn=${package_eager_result_dir}/pipeline_info/pipeline_report.txt ## The pipeline report file from nf-core/eager
-
   eager_version=$(grep "Pipeline Release:" ${pipeline_report_fn} | awk -F ":" '{print $NF}')
 
   ## Each attribute now comes in its own line. (0.2.0dev +)
@@ -140,17 +140,20 @@ function add_versions_file() {
   ## If the grep above returned nothing, then there is no Capture Type profile.
   if [[ -z ${capture_type_version_string} ]]; then
     capture_type_version=''
+    capture_type_config=''
   else
     capture_type_version=$(echo ${capture_type_version_string} | awk -F ' ' '{print $NF}')
+    capture_type_config="1240K" ## TODO-dev un-hard-code 1240K config (future packages will have the keyword "CaptureType.XXXX.config")
   fi
+
   config_version=$(grep "config_template_version" ${pipeline_report_fn} | awk -F ' ' '{print $NF}')
   package_config_version=$(grep "package_config_version" ${pipeline_report_fn} | awk -F ' ' '{print $NF}')
 
   ## Create the versions file. Flush any old file contents if the file exists.
   echo "nf-core/eager version: ${eager_version}"              >  ${version_fn}
   echo "Minotaur config version: ${minotaur_version}"         >> ${version_fn}
-  if [[ ! -z ${capture_type_version} ]]; then
-    echo "${capture_type_config} version: ${capture_version}" >> ${version_fn}
+  if [[ ! -z ${capture_type_version_string} ]]; then
+    echo "CaptureType profile: ${capture_type_config} ${capture_type_version}" >> ${version_fn}
   fi
   echo "Config template version: ${config_version}"           >> ${version_fn}
   echo "Package config version: ${package_config_version}"    >> ${version_fn}

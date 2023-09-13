@@ -190,7 +190,8 @@ done
 
 ## Infer other variables from the package_minotaur_directory provided.
 package_name="${package_minotaur_directory##*/}"
-output_package_dir="${repo_dir}/PMA/${package_name}"
+package_oven_dir="/mnt/archgen/poseidon/minotaur/minotaur-package-oven/" ## Hard-coded path for EVA
+output_package_dir="${package_oven_dir}/${package_name}" ## Hard-coded path for EVA
 finalisedtsv_fn="${package_minotaur_directory}/${package_name}.finalised.tsv"
 root_results_dir="${package_minotaur_directory}/results"
 
@@ -214,8 +215,8 @@ fi
 
 ## Create a temporary directory to mix and rename the genotype datasets in.
 ## 'tmp_dir' outside function, 'tempdir' in make_genotype_dataset_out_of_genotypes function
-tmp_dir=$(mktemp -d ${repo_dir}/.tmp/MNT_${package_name}.XXXXXXXXXX)
-check_fail $? "[${package_name}]: Failed to create temporary directory. Aborting.\nCheck your permissions in ${repo_dir}, and that directory ${repo_dir}/.tmp exists."
+tmp_dir=$(mktemp -d ${package_oven_dir}/.tmp/MNT_${package_name}.XXXXXXXXXX)
+check_fail $? "[${package_name}]: Failed to create temporary directory. Aborting.\nCheck your permissions in ${package_oven_dir}, and that directory ${package_oven_dir}/.tmp/ exists."
 
 genotype_fns=($(ls -1 ${root_results_dir}/genotyping/*geno)) ## List of genotype files.
 
@@ -233,7 +234,7 @@ if [[ ! -z $(all_x_in_y 1 ${snp_set} ${#supported_snpsets[@]} ${supported_snpset
 fi
 
 ## If the package exists and the genotypes are not newer than the package, then print a message and do nothing.
-if [[ -d ${output_package_dir} ]] && [[ ${newest_genotype_fn} -nt ${output_package_dir}/${package_name}.geno ]]; then
+if [[ -d ${output_package_dir} ]] && [[ ! ${newest_genotype_fn} -nt ${output_package_dir}/${package_name}.geno ]]; then
   errecho -y "[${package_name}]: Package is up to date."
   exit 0
 
@@ -260,25 +261,28 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
   ## Validate the resulting package
   trident validate -d ${tmp_dir}/package
 
-    ## Only move package dir to live output_dir if validation passed
+    ## Only move package dir to "package oven" if validation passed
   if [[ $? == 0 ]] && [[ ${debug_mode} -ne 1 ]]; then
-    errecho "deleting stuff"
-  #   errecho -y "## Moving temp package to live ##"
-  #   ## Create directory for poseidon package if necessary (used to be trident could not create multiple dirs deep structure)
-  #   ##  Only created now to not trip up the script if execution did not run through fully.
-  #   mkdir -p $(dirname ${output_package_dir})
+    errecho -y "## Moving '${package_name}' to package oven ##"
+    ## Create directory for poseidon package in package oven
+    ##  Only created now to not trip up the script if execution did not run through fully.
+    mkdir -p $(dirname ${output_package_dir})
 
-  #   ## Add Minotaur versioning file to package
-  #   add_versions_file ${root_results_dir} ${tmp_dir}/package/versions.txt
+    ## Add Minotaur versioning file to package
+    add_versions_file ${root_results_dir} ${tmp_dir}/package/versions.txt
 
-  #   ## Move package to live
-  #   mv ${tmp_dir}/package/ ${output_package_dir}/
+    ## Move package contents to the oven
+    mv ${tmp_dir}/package/ ${output_package_dir}
 
-  #   ## Then remove temp files
-  #   errecho -y "## Removing temp directory ##"
-  #   ## Playing it safe by avoiding rm -r
-  #   rm ${tmp_dir}/*
-  #   rmdir ${tmp_dir}
+    ## Then remove remaining temp files
+    errecho -y "## Removing temp directory ##"
+
+    ## Paranoid of removing in root, so extra check for tmp_dir
+    if [[ ! -z ${tmp_dir} ]]; then
+      ## Playing it safe by avoiding rm -r
+      rm ${tmp_dir}/*
+      rmdir ${tmp_dir}
+    fi
   fi
 
   ## Partially fill empty fields in janno.

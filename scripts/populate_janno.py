@@ -106,11 +106,12 @@ def weighted_mean(
     return weighted_mean
 
 
-def weighted_mean(group, wt_col="wt", val_col="val", min_val=100):
+def weighted_mean(
+    group, wt_col="wt", val_col="val", filter_col="filter_col", min_val=100
+):
     non_nan_indices = ~group[val_col].isna()
-    filtered_indices = group[val_col] >= min_val  ## Remove values below the cutoff
-    valid_indices = non_nan_indices & filtered_indices
-
+    filter_indices = group[filter_col] >= min_val  ## Remove values below the cutoff
+    valid_indices = non_nan_indices & filter_indices
     if valid_indices.any():
         weighted_values = (
             group.loc[valid_indices, wt_col] * group.loc[valid_indices, val_col]
@@ -121,7 +122,6 @@ def weighted_mean(group, wt_col="wt", val_col="val", min_val=100):
         weighted_mean = weighted_values.sum() / total_weight
     else:
         weighted_mean = np.nan  # Return NaN if no valid values left
-
     return weighted_mean
 
 
@@ -195,7 +195,7 @@ contamination_table = pyEager.parsers.parse_nuclear_contamination_json(
 sex_determination_table = pyEager.parsers.parse_sexdeterrmine_json(
     sexdeterrmine_json_path
 )
-## TODO update pyEager tsv parser to add expected filename columns based on decisions inferred from TSV.
+
 tsv_table = pyEager.parsers.parse_eager_tsv(args.eager_tsv_path)
 tsv_table = pyEager.parsers.infer_merged_bam_names(
     tsv_table, run_trim_bam=True, skip_deduplication=False
@@ -208,7 +208,6 @@ janno_table = pd.read_table(poseidon_yaml_data.janno_file, dtype=str)
 janno_table["Eager_ID"] = janno_table["Poseidon_ID"].str.replace(r"_MNT", "")
 janno_table["Main_ID"] = janno_table["Eager_ID"].str.replace(r"_ss", "")
 
-## TODO Compile all tables appropriately to populate janno file.
 ## Prepare damage table for joining. Infer eager Library_ID from id column, by removing '_rmdup.bam' suffix
 ## TODO-dev Check if this is the correct way to infer Library_ID from id column when the results are on the sample level.
 damage_table["Library_ID"] = damage_table["id"].str.replace(r"_rmdup.bam", "")
@@ -247,9 +246,6 @@ contamination_table["Contamination_SE"] = pd.to_numeric(
 )
 
 ## Prepare sex determination table for joining. Naming is sometimes at library and sometimes at sample-level, but results are always at sample level.
-sex_determination_table["bam"] = sex_determination_table["id"].str.replace(
-    r".*strand.bam", ""
-)  ## TODO this wont be needed once the tsv parser is updated.
 sex_determination_table = sex_determination_table[
     ["id", "RateX", "RateY", "RateErrX", "RateErrY"]
 ]
@@ -416,4 +412,75 @@ for col in [
         filled_janno_table[[col + "_x", col + "_y"]].bfill(axis=1).iloc[:, 0]
     )
 
+## Drop columns duplicated from merges, and columns that are not relevant anymore.
+filled_janno_table = filled_janno_table.drop(
+    list(filled_janno_table.filter(regex=r".*_(x|y)")), axis=1
+).drop("Sample_Name", axis=1)
+
+## Replace NAs with "n/a"
 filled_janno_table.replace(np.nan, "n/a", inplace=True)
+
+final_column_order = [
+    "Poseidon_ID",
+    "Genetic_Sex",
+    "Group_Name",
+    "Alternative_IDs",
+    "Main_ID",  ## Added
+    "Relation_To",
+    "Relation_Degree",
+    "Relation_Type",
+    "Relation_Note",
+    "Collection_ID",
+    "Country",
+    # "Country_ISO",
+    "Location",
+    "Site",
+    "Latitude",
+    "Longitude",
+    "Date_Type",
+    "Date_C14_Labnr",
+    "Date_C14_Uncal_BP",
+    "Date_C14_Uncal_BP_Err",
+    "Date_BC_AD_Start",
+    "Date_BC_AD_Median",
+    "Date_BC_AD_Stop",
+    "Date_Note",
+    "MT_Haplogroup",
+    "Y_Haplogroup",
+    "Source_Tissue",
+    "Nr_Libraries",
+    "Library_Names",
+    "Capture_Type",
+    "UDG",
+    "Library_Built",
+    "Genotype_Ploidy",
+    "Data_Preparation_Pipeline_URL",
+    "Endogenous",
+    "Nr_SNPs",
+    "Coverage_on_Target_SNPs",
+    "Damage",
+    "Contamination",
+    "Contamination_Err",
+    "Contamination_Meas",
+    "Contamination_Note",
+    "Genetic_Source_Accession_IDs",
+    "Primary_Contact",
+    "Publication",
+    "Note",
+    "Keywords",
+    "Eager_ID",  ## Added
+    "RateX",  ## Added
+    "RateY",  ## Added
+    "RateErrX",  ## Added
+    "RateErrY",  ## Added
+]
+
+## Reorder columns to match desired order
+filled_janno_table = filled_janno_table[final_column_order]
+
+if args.safe:
+    out_fn = f"{poseidon_yaml_data.janno_file}.new"
+    print(f"Safe mode is activated. Results saved in: {out_fn}")
+    filled_janno_table.to_csv(out_fn, sep="\t", index=False)
+else:
+    filled_janno_table.to_csv(poseidon_yaml_data.janno_file, sep="\t", index=False)

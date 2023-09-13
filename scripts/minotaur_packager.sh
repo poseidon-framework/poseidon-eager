@@ -135,6 +135,7 @@ function add_versions_file() {
 
   ## Each attribute now comes in its own line. (0.2.0dev +)
   minotaur_version=$(grep "Minortaur.config" ${pipeline_report_fn} | awk -F ' ' '{print $NF}')
+  ## TODO-dev un-hard-code 1240K config (future packages will have the keyword "CaptureType.XXXX.config")
   capture_type_version_string=$(grep "1240K.config" ${pipeline_report_fn})
   ## If the grep above returned nothing, then there is no Capture Type profile.
   if [[ -z ${capture_type_version_string} ]]; then
@@ -246,7 +247,13 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
   check_fail $? "[${package_name}]: Failed to initialise package. Aborting."
 
   ## Fill in janno
-  ## TODO Implementing reading of json stuff in python for more portability.
+  ${repo_dir}/scripts/populate_janno.py -r ${package_minotaur_directory}/results/ -t ${finalisedtsv_fn} -p ${tmp_dir}/package/POSEIDON.yml
+
+  ## Update the package yaml to account for the changes in the janno (update renamed to rectify)
+  trident rectify -d ${tmp_dir}/package \
+    --packageVersion Patch \
+    ## TODO Add poseidon core team, or Minotaur as contributors?
+    --logText "Automatic update of janno file from Minotaur processing." \
 
   ## Validate the resulting package
   trident validate -d ${tmp_dir}/package

@@ -415,6 +415,7 @@ for col in [
     "Contamination",
     "Nr_Libraries",
     "Contamination_Note",
+    "Library_Names",
 ]:
     filled_janno_table[col] = (
         filled_janno_table[[col + "_x", col + "_y"]].bfill(axis=1).iloc[:, 0]
@@ -440,7 +441,7 @@ final_column_order = [
     "Relation_Note",
     "Collection_ID",
     "Country",
-    # "Country_ISO",
+    "Country_ISO",
     "Location",
     "Site",
     "Latitude",

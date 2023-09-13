@@ -132,20 +132,28 @@ function add_versions_file() {
   pipeline_report_fn=${package_eager_result_dir}/pipeline_info/pipeline_report.txt ## The pipeline report file from nf-core/eager
 
   eager_version=$(grep "Pipeline Release:" ${pipeline_report_fn} | awk -F ":" '{print $NF}')
-  ## Config versioning is pulled from config description. Extract the actual dscription text into minotaur_versioning_string.
-  minotaur_versioning_string=$(grep "Config Profile Description:" ${pipeline_report_fn} | cut -d ':'  -f 2- )
-  ## For each version we want to keep, extract the version number from the minotaur_versioning_string.
-  minotaur_version=$(echo ${minotaur_versioning_string} | cut -d ',' -f 1 | cut -d ':' -f 2 | tr -d ' ')
-  capture_type_config=$(echo ${minotaur_versioning_string} | cut -d ',' -f 2 | cut -d ':' -f 1 | tr -d ' ')
-  capture_version=$(echo ${minotaur_versioning_string} | cut -d ',' -f 2 | cut -d ':' -f 2 | tr -d ' ')
-  config_version=$(echo ${minotaur_versioning_string} | cut -d ',' -f 4 | cut -d ':' -f 2 | tr -d ' ')
+
+  ## Each attribute now comes in its own line. (0.2.0dev +)
+  minotaur_version=$(grep "Minortaur.config" ${pipeline_report_fn} | awk -F ' ' '{print $NF}')
+  capture_type_version_string=$(grep "1240K.config" ${pipeline_report_fn})
+  ## If the grep above returned nothing, then there is no Capture Type profile.
+  if [[ -z ${capture_type_version_string} ]]; then
+    capture_type_version=''
+  else
+    capture_type_version=$(echo ${capture_type_version_string} | awk -F ' ' '{print $NF}')
+  fi
+  config_version=$(grep "config_template_version" ${pipeline_report_fn} | awk -F ' ' '{print $NF}')
+  package_config_version=$(grep "package_config_version" ${pipeline_report_fn} | awk -F ' ' '{print $NF}')
 
   ## Create the versions file. Flush any old file contents if the file exists.
-  echo "nf-core/eager version: ${eager_version}"            >  ${version_fn}
-  echo "Minotaur config version: ${minotaur_version}"       >> ${version_fn}
-  echo "${capture_type_config} version: ${capture_version}" >> ${version_fn}
-  echo "Package config version: ${config_version}"          >> ${version_fn}
-  echo "Minotaur-packager version: ${VERSION}"              >> ${version_fn}
+  echo "nf-core/eager version: ${eager_version}"              >  ${version_fn}
+  echo "Minotaur config version: ${minotaur_version}"         >> ${version_fn}
+  if [[ ! -z ${capture_type_version} ]]; then
+    echo "${capture_type_config} version: ${capture_version}" >> ${version_fn}
+  fi
+  echo "Config template version: ${config_version}"           >> ${version_fn}
+  echo "Package config version: ${package_config_version}"    >> ${version_fn}
+  echo "Minotaur-packager version: ${VERSION}"                >> ${version_fn}
 }
 
 ## Parse CLI args.
@@ -211,13 +219,14 @@ check_fail $? "[${package_name}]: Failed to create temporary directory. Aborting
 genotype_fns=($(ls -1 ${root_results_dir}/genotyping/*geno)) ## List of genotype files.
 
 ## Infer the SNP set from the config activated in the minotaur run from the config description.
-##  A bit of a hack. Relies on the snp set being the exact name of the snp set profile in MINOTAUR, and the config version being in the second part of the config description (after first comma).
-snp_set=$( grep 'Config Profile Description' ${root_results_dir}/pipeline_info/pipeline_report.txt | cut -f 2 -d ',' | cut -d ':' -f 1 | tr -d ' ' | cut -d '.' -f 1 )
+##  TODO-dev Currently hard-coded to 1240K since all data thus far is 1240K. This should grep "CaptureType" from the pipeline report, and infer the SNP set from that.
+# snp_set=$( grep 'Config Profile Description' ${root_results_dir}/pipeline_info/pipeline_report.txt | cut -f 2 -d ',' | cut -d ':' -f 1 | tr -d ' ' | cut -d '.' -f 1 )
+snp_set="1240K"
 errecho -y "[${package_name}]: SNP set inferred as '${snp_set}'."
 
 ## Check that the inferred snp set is supported. Should trigger if the inference somehow breaks.
-supported_snpsets=($(ls -1 conf/CaptureType_profiles/ | cut -d "." -f 1))
-if [[ $(all_x_in_y 1 ${snp_set} ${#supported_snpsets[@]} ${supported_snpsets[@]}) != '' ]]; then
+supported_snpsets=($(ls -1 ${repo_dir}/conf/CaptureType_profiles/ | cut -d "." -f 1))
+if [[ ! -z $(all_x_in_y 1 ${snp_set} ${#supported_snpsets[@]} ${supported_snpsets[@]}) ]]; then
   errecho -r "[${package_name}]: Inferred SNP set '${snp_set}' is not supported. SNP set inference might have gone wrong."
   exit 1
 fi

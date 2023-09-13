@@ -57,18 +57,19 @@ class PoseidonYaml:
         self.package_version = self.yaml_data["packageVersion"]
         self.last_modified = self.yaml_data["lastModified"]
         self.janno_file = os.path.join(self.package_dir, self.yaml_data["jannoFile"])
-        self.janno_file_chk_sum = self.yaml_data["jannoFileChkSum"]
-        self.sequencing_source_file = os.path.join(
-            self.package_dir, self.yaml_data["sequencingSourceFile"]
-        )
-        self.sequencing_source_file_chk_sum = self.yaml_data[
-            "sequencingSourceFileChkSum"
-        ]
-        self.bib_file = os.path.join(self.package_dir, self.yaml_data["bibFile"])
-        self.bib_file_chk_sum = self.yaml_data["bibFileChkSum"]
-        self.changelog_file = os.path.join(
-            self.package_dir, self.yaml_data["changelogFile"]
-        )
+        try:
+            self.janno_file_chk_sum = self.yaml_data["jannoFileChkSum"]
+            self.sequencing_source_file = os.path.join(
+                self.package_dir, self.yaml_data["sequencingSourceFile"]
+            )
+            self.sequencing_source_file_chk_sum = self.yaml_data[
+                "sequencingSourceFileChkSum"
+            ]
+            self.bib_file = os.path.join(self.package_dir, self.yaml_data["bibFile"])
+            self.bib_file_chk_sum = self.yaml_data["bibFileChkSum"]
+            self.changelog_file = os.path.join(
+                self.package_dir, self.yaml_data["changelogFile"]
+            )
         ## For each key-value pair in dict, check if key is genoFile. If so, join the package_dir to the value. Else, just add the value.
         ## Also convert keys from camelCase to snake_case.
         genotype_data = {}

@@ -253,8 +253,9 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
   ## Update the package yaml to account for the changes in the janno (update renamed to rectify)
   trident rectify -d ${tmp_dir}/package \
     --packageVersion Patch \
-    ## TODO Add poseidon core team, or Minotaur as contributors?
     --logText "Automatic update of janno file from Minotaur processing." \
+    --checksumAll
+    ## TODO Add poseidon core team, or Minotaur as contributors?
 
   ## Validate the resulting package
   trident validate -d ${tmp_dir}/package

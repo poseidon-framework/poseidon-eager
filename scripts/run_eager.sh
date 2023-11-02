@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-VERSION='0.2.0dev'
+VERSION='0.2.1dev'
 
 TEMP=`getopt -q -o hvadD --long help,version,test,array,dry_run,debug: -n 'run_eager.sh' -- "$@"`
 eval set -- "$TEMP"
@@ -51,7 +51,7 @@ nxf_path="/mnt/archgen/tools/nextflow/22.04.5.5708/" ## Use centarlly installed 
 eager_version='2.4.6'
 root_eager_dir="${repo_dir}/eager/"
 root_package_dir="${repo_dir}/packages/"
-nextflow_profiles="eva,archgen,medium_data,eva_local_paths"
+nextflow_profiles="eva,archgen,big_data,eva_local_paths"
 tower_config="${repo_dir}/.nextflow_tower.conf" ## Optional tower.nf configuration
 array_temp_fn_dir="${repo_dir}/array_tempfiles"
 array_logs_dir="${repo_dir}/array_Logs"

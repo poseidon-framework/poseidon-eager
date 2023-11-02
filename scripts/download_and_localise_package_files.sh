@@ -46,7 +46,8 @@ ssf_file="${package_dir}/${package_name}.ssf"
 download_dir="${repo_dir}/raw_sequencing_data/"
 download_log_dir="${download_dir}/download_logs"
 local_data_dir="${repo_dir}/raw_sequencing_data/${package_name}"
-symlink_dir="${repo_dir}/eager/${package_name}/data"
+package_eager_dir="${repo_dir}/eager/${package_name}/"
+symlink_dir="${package_eager_dir}/data"
 tsv_patch_fn="${package_dir}/${package_name}.tsv_patch.sh"
 original_tsv="${package_dir}/${package_name}.tsv"
 
@@ -59,7 +60,7 @@ check_fail $? "${script_debug_string} Downloads did not finish completely. Try a
 
 ## STEP 2: Validate downloaded files.
 mkdir -p ${symlink_dir}
-${repo_dir}/scripts/validate_downloaded_data.sh ${ssf_file} ${local_data_dir} ${symlink_dir}
+${repo_dir}/scripts/validate_downloaded_data.sh ${ssf_file} ${local_data_dir} ${package_eager_dir}
 check_fail $? "${script_debug_string} Validation and symlink creation failed."
 
 ## STEP 3: Localise TSV file.

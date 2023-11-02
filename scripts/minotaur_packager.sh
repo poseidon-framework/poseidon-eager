@@ -254,6 +254,17 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
   errecho -y "Populating janno file"
   ${repo_dir}/scripts/populate_janno.py -r ${package_minotaur_directory}/results/ -t ${finalisedtsv_fn} -p ${tmp_dir}/package/POSEIDON.yml
 
+  ## TODO-dev Infer genetic sex from janno and mirror to ind file.
+
+  ## Convert data to PLINK format
+  trident genoconvert -d ${tmp_dir}/package \
+    --genoFile ${tmp_dir}/package/${package_name}.geno \
+    --snpFile ${tmp_dir}/package/${package_name}.snp \
+    --indFile ${tmp_dir}/package/${package_name}.ind \
+    --inFormat EIGENSTRAT \
+    --outFormat PLINK \
+    --removeOld
+
   ## Update the package yaml to account for the changes in the janno (update renamed to rectify)
   trident rectify -d ${tmp_dir}/package \
     --packageVersion Patch \

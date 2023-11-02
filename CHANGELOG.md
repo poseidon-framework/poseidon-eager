@@ -3,6 +3,26 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.2.1dev - 02/11/2023
+
+### `Added`
+
+- `scripts/minotaur_packager.sh`:        Script to create poseidon half-packages and fill in janno from eager results
+- `scripts/populate_janno.py`:           Script to fill in janno files with poseidon metadata from nf-core eager results.
+
+### `Fixed`
+
+- `scripts/validate_downloaded_data.sh`: Add helptext
+- `scripts/run_eager.sh`:                Now uses `big_data` profile
+- Updates to templates for packages and configs. These are now defunct as they are pulled from the minotaur-recipes repo, and will be removed in netx release.
+- `scripts/download_and_localise_package_files.sh` distinction between symlink dir and package_eager_dir.
+
+### `Dependencies`
+
+- nf-core/eager=2.4.6
+
+### `Deprecated`
+
 ## v0.2.0dev - 25/04/2023
 
 ### `Added`

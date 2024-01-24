@@ -36,6 +36,12 @@ def infer_library_name(row, prefix_col=None, target_col=None):
 
     return inferred_name
 
+def set_contamination_measure(row):
+    ## If the row's contamination is not NaN, then set to "ANGSD", otherwise NaN
+    if not pd.isna(row["Contamination"]):
+        return "ANGSD[v0.935]" ## TODO-dev infer the version from eager software_versions.txt
+    else:
+        return np.nan
 
 ## Function that takes a pd.DataFrame and the name of a column, and applies the format to it to add a new column named poseidon_id
 class PoseidonYaml:
@@ -376,6 +382,11 @@ summarised_stats = (
     .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
 )
 
+## If Contamination column is not empty, add the contamination measure
+summarised_stats["Contamination_Meas"] = summarised_stats.apply(
+    set_contamination_measure, axis=1
+)
+
 summarised_stats = (
     compound_eager_table.groupby("Sample_Name")[["damage", "n_reads"]]
     .apply(
@@ -415,6 +426,8 @@ for col in [
     "Contamination",
     "Nr_Libraries",
     "Contamination_Note",
+    "Library_Names",
+    "Contamination_Meas",
 ]:
     filled_janno_table[col] = (
         filled_janno_table[[col + "_x", col + "_y"]].bfill(axis=1).iloc[:, 0]
@@ -440,7 +453,7 @@ final_column_order = [
     "Relation_Note",
     "Collection_ID",
     "Country",
-    # "Country_ISO",
+    "Country_ISO",
     "Location",
     "Site",
     "Latitude",

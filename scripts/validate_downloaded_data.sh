@@ -1,12 +1,35 @@
 #!/usr/bin/env bash
 set -uo pipefail ## Pipefail, complain on new unassigned variables.
-VERSION='0.2.1dev'
+VERSION='0.2.2dev'
 ## Load helper bash functions
 source $(dirname ${0})/source_me.sh
 
+function Helptext() {
+  echo -ne "\t usage: ${0} [options] <ssf_fn> <download_dir> <package_eager_dir> \n\n"
+  echo -ne "This validates that the md5sums for downloaded FastQ files match the ones in the SSF for the package, and creates symlinks for each line in the eager input TSV.\n\n"
+  echo -ne "Options:\n"
+  echo -ne "-h, --help\t\tPrint this text and exit.\n"
+  echo -ne "-v, --version\t\tPrint version and exit.\n"
+}
+
+## Show helptext and exit if no arguments are provided
+if [[ ${#@} -eq 0 ]]; then
+  Helptext
+  exit 0
+fi
+
+if [[ ${1} == '-v' || ${1} == '--version' ]]; then
+  echo "validate_downloaded_data.sh version: ${VERSION}"
+  exit 0
+elif [[ ${1} == '-h' || ${1} == '--help' ]]; then
+  Helptext
+  exit 0
+fi
+
 ssf_file=$(readlink -f ${1})
 download_dir=$(readlink -f ${2})
-symlink_dir=$(readlink -f ${3})
+package_eager_dir=$(readlink -f ${3})
+symlink_dir=${package_eager_dir}/data
 md5sum_file="${download_dir}/expected_md5sums.txt"
 newest_fastq=$(ls -Art -1 ${download_dir}/*q.gz | tail -n 1) ## Reverse order and tail to avoid broken pipe errors
 script_debug_string="[validate_downloaded_data.sh]:"

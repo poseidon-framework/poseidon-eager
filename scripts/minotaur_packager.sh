@@ -138,16 +138,19 @@ function add_versions_file() {
   capture_type_version_string=$(grep '^ - CaptureType\.[0-9A-Za-z]*\.config' ${pipeline_report_fn})
   ## If the grep above returned nothing, then there is no Capture Type profile.
   if [[ -z ${capture_type_version_string} ]]; then
+    errecho -y "[${package_name}]: No CaptureType profile used for package."
     capture_type_version=''
     capture_type_config=''
   else
     capture_type_version=$(echo ${capture_type_version_string} | awk -F ' ' '{print $NF}')
     capture_type_config=$(echo ${capture_type_version_string} | awk -F '.' '{print $2}') ## If there is a capture type profile, it is the second field in the string, surrounded by '.'.
+    errecho -y "[${package_name}]: Package was processed using the ${capture_type_config} CaptureType profile, with version ${capture_type_version}."
   fi
 
   config_version=$(grep "config_template_version" ${pipeline_report_fn} | awk -F ' ' '{print $NF}')
   package_config_version=$(grep "package_config_version" ${pipeline_report_fn} | awk -F ' ' '{print $NF}')
 
+  errecho -y "[${package_name}]: Writing version info to '${version_fn}'."
   ## Create the versions file. Flush any old file contents if the file exists.
   echo "This package was created on $(date +'%Y-%M-%d') and was processed using the following versions:" > ${version_fn}
   echo " - nf-core/eager version: ${eager_version}"               >> ${version_fn}

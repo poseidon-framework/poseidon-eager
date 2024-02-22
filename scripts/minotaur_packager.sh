@@ -288,16 +288,21 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
 
     ## Only move package dir to "package oven" if validation passed
   if [[ $? == 0 ]] && [[ ${debug_mode} -ne 1 ]]; then
-    errecho -y "## Moving '${package_name}' to package oven ##"
     ## Create directory for poseidon package in package oven
     ##  Only created now to not trip up the script if execution did not run through fully.
     mkdir -p $(dirname ${output_package_dir})
 
+    ## If the pacakge directory already exists, then hide it (just in case)
+    if [[ -d ${output_package_dir} ]]; then
+      errecho -y "[${package_name}] Hiding old package directory ##"
+      mv ${output_package_dir} .${output_package_dir}
+    fi
     ## Move package contents to the oven
+    errecho -y "[${package_name}]  Moving '${package_name}' to package oven ##"
     mv ${tmp_dir}/package/ ${output_package_dir}
 
     ## Then remove remaining temp files
-    errecho -y "## Removing temp directory ##"
+    errecho -y "[${package_name}] Removing temp directory"
 
     ## Paranoid of removing in root, so extra check for tmp_dir
     if [[ ! -z ${tmp_dir} ]]; then

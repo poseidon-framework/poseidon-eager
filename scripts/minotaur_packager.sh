@@ -134,30 +134,31 @@ function add_versions_file() {
   eager_version=$(grep "Pipeline Release:" ${pipeline_report_fn} | awk -F ":" '{print $NF}')
 
   ## Each attribute now comes in its own line. (0.2.0dev +)
-  minotaur_version=$(grep "Minortaur.config" ${pipeline_report_fn} | awk -F ' ' '{print $NF}')
-  ## TODO-dev un-hard-code 1240K config (future packages will have the keyword "CaptureType.XXXX.config")
-  capture_type_version_string=$(grep "1240K.config" ${pipeline_report_fn})
+  minotaur_version=$(grep "Minotaur.config" ${pipeline_report_fn} | awk -F ' ' '{print $NF}')
+  capture_type_version_string=$(grep '^ - CaptureType\.[0-9A-Za-z]*\.config' ${pipeline_report_fn})
   ## If the grep above returned nothing, then there is no Capture Type profile.
   if [[ -z ${capture_type_version_string} ]]; then
     capture_type_version=''
     capture_type_config=''
   else
     capture_type_version=$(echo ${capture_type_version_string} | awk -F ' ' '{print $NF}')
-    capture_type_config="1240K" ## TODO-dev un-hard-code 1240K config (future packages will have the keyword "CaptureType.XXXX.config")
+    capture_type_config=$(echo ${capture_type_version_string} | awk -F '.' '{print $2}') ## If there is a capture type profile, it is the second field in the string, surrounded by '.'.
   fi
 
   config_version=$(grep "config_template_version" ${pipeline_report_fn} | awk -F ' ' '{print $NF}')
   package_config_version=$(grep "package_config_version" ${pipeline_report_fn} | awk -F ' ' '{print $NF}')
 
   ## Create the versions file. Flush any old file contents if the file exists.
-  echo "nf-core/eager version: ${eager_version}"              >  ${version_fn}
-  echo "Minotaur config version: ${minotaur_version}"         >> ${version_fn}
+  echo "This package was created on $(date +'%Y-%M-%d') and was processed using the following versions:" > ${version_fn}
+  echo " - nf-core/eager version: ${eager_version}"               >> ${version_fn}
+  echo " - Minotaur config version: ${minotaur_version}"          >> ${version_fn}
   if [[ ! -z ${capture_type_version_string} ]]; then
-    echo "CaptureType profile: ${capture_type_config} ${capture_type_version}" >> ${version_fn}
+    echo " - CaptureType profile: ${capture_type_config}"         >> ${version_fn}
+    echo " - CaptureType config version: ${capture_type_version}" >> ${version_fn}
   fi
-  echo "Config template version: ${config_version}"           >> ${version_fn}
-  echo "Package config version: ${package_config_version}"    >> ${version_fn}
-  echo "Minotaur-packager version: ${VERSION}"                >> ${version_fn}
+  echo " - Config template version: ${config_version}"            >> ${version_fn}
+  echo " - Package config version: ${package_config_version}"     >> ${version_fn}
+  echo " - Minotaur-packager version: ${VERSION}"                 >> ${version_fn}
 }
 
 ## Parse CLI args.
@@ -256,6 +257,10 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
 
   ## TODO-dev Infer genetic sex from janno and mirror to ind file.
 
+  ## Add Minotaur version info to README of package
+  add_versions_file ${root_results_dir} ${tmp_dir}/package/${package_name}.md
+  echo "readmeFile: ${package_name}.md" >> ${tmp_dir}/package/POSEIDON.yml
+
   ## Convert data to PLINK format
   trident genoconvert -d ${tmp_dir}/package \
     --genoFile ${tmp_dir}/package/${package_name}.geno \
@@ -281,9 +286,6 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
     ## Create directory for poseidon package in package oven
     ##  Only created now to not trip up the script if execution did not run through fully.
     mkdir -p $(dirname ${output_package_dir})
-
-    ## Add Minotaur versioning file to package
-    add_versions_file ${root_results_dir} ${tmp_dir}/package/versions.txt
 
     ## Move package contents to the oven
     mv ${tmp_dir}/package/ ${output_package_dir}

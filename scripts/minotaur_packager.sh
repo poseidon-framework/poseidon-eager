@@ -265,6 +265,7 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
   echo "readmeFile: ${package_name}.md" >> ${tmp_dir}/package/POSEIDON.yml
 
   ## Convert data to PLINK format
+  errecho -y "[${package_name}] Converting data to PLINK format"
   trident genoconvert -d ${tmp_dir}/package \
     --genoFile ${tmp_dir}/package/${package_name}.geno \
     --snpFile ${tmp_dir}/package/${package_name}.snp \
@@ -274,6 +275,7 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
     --removeOld
 
   ## Update the package yaml to account for the changes in the janno (update renamed to rectify)
+  errecho -y "[${package_name}] Rectifying package"
   trident rectify -d ${tmp_dir}/package \
     --packageVersion Patch \
     --logText "Automatic update of janno file from Minotaur processing." \
@@ -281,6 +283,7 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
     ## TODO Add poseidon core team, or Minotaur as contributors?
 
   ## Validate the resulting package
+  errecho -y "[${package_name}] Validating package"
   trident validate -d ${tmp_dir}/package
 
     ## Only move package dir to "package oven" if validation passed

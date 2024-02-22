@@ -292,13 +292,13 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
     ##  Only created now to not trip up the script if execution did not run through fully.
     mkdir -p $(dirname ${output_package_dir})
 
-    ## If the pacakge directory already exists, then hide it (just in case)
+    ## If the package directory already exists, remove it
     if [[ -d ${output_package_dir} ]]; then
-      errecho -y "[${package_name}] Hiding old package directory ##"
-      mv ${output_package_dir} .${output_package_dir}
+      errecho -y "[${package_name}] Removing old package directory"
+      rm -r ${output_package_dir}
     fi
     ## Move package contents to the oven
-    errecho -y "[${package_name}]  Moving '${package_name}' to package oven ##"
+    errecho -y "[${package_name}]  Moving '${package_name}' dough to package oven"
     mv ${tmp_dir}/package/ ${output_package_dir}
 
     ## Then remove remaining temp files

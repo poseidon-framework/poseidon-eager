@@ -263,7 +263,7 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
 
   ## Add Minotaur version info to README of package
   add_versions_file ${root_results_dir} ${tmp_dir}/package/README.md
-  echo "readmeFile: ${package_name}.md" >> ${tmp_dir}/package/POSEIDON.yml
+  echo "readmeFile: README.md" >> ${tmp_dir}/package/POSEIDON.yml
 
   ## Convert data to PLINK format
   errecho -y "[${package_name}] Converting data to PLINK format"

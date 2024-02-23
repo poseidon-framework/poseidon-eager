@@ -192,7 +192,7 @@ while true ; do
   case "$1" in
     -h|--help)          Helptext; exit 0 ;;
     -v|--version)       echo ${VERSION}; exit 0;;
-    -f|--force)         force_recreate="TRUE"; shift ;;
+    -f|--force)         force_recreate="TRUE"; errecho -r "[minotaur_packager.sh]: Forcing package recreation."; shift ;;
     -d|--debug)         errecho -y "[minotaur_packager.sh]: Debug mode activated."; debug_mode=1; shift ;;
     --)                 package_minotaur_directory="${2%/}"; break ;;
     *)                  echo -e "invalid option provided.\n"; Helptext; exit 1;;

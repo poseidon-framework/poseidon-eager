@@ -245,7 +245,7 @@ if [[ ! -z $(all_x_in_y 1 ${snp_set} ${#supported_snpsets[@]} ${supported_snpset
 fi
 
 ## If the package exists and the genotypes are not newer than the package, then print a message and do nothing.
-if [[ -d ${output_package_dir} ]] && [[ ! ${newest_genotype_fn} -nt ${output_package_dir}/${package_name}.bed ]] && [[ ${force_recreate} != "TRUE" ]];; then
+if [[ -d ${output_package_dir} ]] && [[ ! ${newest_genotype_fn} -nt ${output_package_dir}/${package_name}.bed ]] && [[ ${force_recreate} != "TRUE" ]]; then
   errecho -y "[${package_name}]: Package is up to date."
   exit 0
 

@@ -152,7 +152,8 @@ function add_versions_file() {
 
   errecho -y "[${package_name}]: Writing version info to '${version_fn}'."
   ## Create the versions file. Flush any old file contents if the file exists.
-  echo "This package was created on $(date +'%Y-%M-%d') and was processed using the following versions:" > ${version_fn}
+  echo "# ${package_name}"                                        > ${version_fn}
+  echo "This package was created on $(date +'%Y-%M-%d') and was processed using the following versions:" >> ${version_fn}
   echo " - nf-core/eager version: ${eager_version}"               >> ${version_fn}
   echo " - Minotaur config version: ${minotaur_version}"          >> ${version_fn}
   if [[ ! -z ${capture_type_version_string} ]]; then
@@ -261,7 +262,7 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
   ## TODO-dev Infer genetic sex from janno and mirror to ind file.
 
   ## Add Minotaur version info to README of package
-  add_versions_file ${root_results_dir} ${tmp_dir}/package/${package_name}.md
+  add_versions_file ${root_results_dir} ${tmp_dir}/package/README.md
   echo "readmeFile: ${package_name}.md" >> ${tmp_dir}/package/POSEIDON.yml
 
   ## Convert data to PLINK format

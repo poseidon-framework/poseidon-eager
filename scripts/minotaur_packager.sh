@@ -166,7 +166,7 @@ function add_versions_file() {
 }
 
 ## Parse CLI args.
-TEMP=`getopt -q -o dhv --long debug,help,version -n "${0}" -- "$@"`
+TEMP=`getopt -q -o dhfv --long debug,help,force,version -n "${0}" -- "$@"`
 eval set -- "${TEMP}"
 
 ## Parameter defaults
@@ -178,6 +178,8 @@ eval set -- "${TEMP}"
 ##     ├── results/                       ## nf-core/eager results directory
 ##     └── work/                          ## Netxtflow work directory
 package_minotaur_directory=''
+force_recreate="FALSE"
+debug_mode=0
 
 ## Print helptext and exit when no option is provided.
 if [[ "${#@}" == "1" ]]; then
@@ -190,6 +192,7 @@ while true ; do
   case "$1" in
     -h|--help)          Helptext; exit 0 ;;
     -v|--version)       echo ${VERSION}; exit 0;;
+    -f|--force)         force_recreate="TRUE"; shift ;;
     -d|--debug)         errecho -y "[minotaur_packager.sh]: Debug mode activated."; debug_mode=1; shift ;;
     --)                 package_minotaur_directory="${2%/}"; break ;;
     *)                  echo -e "invalid option provided.\n"; Helptext; exit 1;;
@@ -242,12 +245,12 @@ if [[ ! -z $(all_x_in_y 1 ${snp_set} ${#supported_snpsets[@]} ${supported_snpset
 fi
 
 ## If the package exists and the genotypes are not newer than the package, then print a message and do nothing.
-if [[ -d ${output_package_dir} ]] && [[ ! ${newest_genotype_fn} -nt ${output_package_dir}/${package_name}.geno ]]; then
+if [[ -d ${output_package_dir} ]] && [[ ! ${newest_genotype_fn} -nt ${output_package_dir}/${package_name}.bed ]] && [[ ${force_recreate} != "TRUE" ]];; then
   errecho -y "[${package_name}]: Package is up to date."
   exit 0
 
 ## If genotypes are new or the package does not exist, then create/update the package genotypes.
-elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_package_dir}/${package_name}.geno ]]; then
+elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_package_dir}/${package_name}.bed ]] || [[ ${force_recreate} == "TRUE" ]]; then
   errecho -y "[${package_name}]: Genotypes are new or package does not exist. Creating/Updating package genotypes."
   make_genotype_dataset_out_of_genotypes "EIGENSTRAT" "${package_name}" "${tmp_dir}" ${genotype_fns[@]}
 

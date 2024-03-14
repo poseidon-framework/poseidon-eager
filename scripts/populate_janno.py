@@ -10,7 +10,7 @@ import re
 import numpy as np
 from collections import namedtuple
 
-VERSION = "0.2.0dev"
+VERSION = "0.2.1dev"
 
 
 def camel_to_snake(name):
@@ -174,6 +174,13 @@ parser.add_argument(
     action="store_true",
     help="Activate safe mode. The package's janno and ind files will not be updated, but instead new files will be created with the '.new' suffix. Only useful for testing.",
 )
+parser.add_argument(
+    "-s",
+    "--ssf_path",
+    metavar="<SSF>",
+    required=True,
+    help="The path to the SSF file of the recipe for the minotaur package.",
+)
 parser.add_argument("-v", "--version", action="version", version=VERSION)
 
 args = parser.parse_args()
@@ -215,6 +222,8 @@ tsv_table = pyEager.parsers.infer_merged_bam_names(
     tsv_table, run_trim_bam=True, skip_deduplication=False
 )
 
+ssf_table = pd.read_table(args.ssf_path, dtype=str)
+
 ## Read poseidon yaml, infer path to janno file and read janno file.
 poseidon_yaml_data = PoseidonYaml(args.poseidon_yml_path)
 janno_table = pd.read_table(poseidon_yaml_data.janno_file, dtype=str)
@@ -235,6 +244,16 @@ damage_table = damage_table[["Library_ID", "n_reads", "dmg_5p_1bp"]].rename(
 endogenous_table = endogenous_table[["id", "endogenous_dna"]].rename(
     columns={"id": "Library_ID", "endogenous_dna": "endogenous"}
 )
+## Get df with minotaur_library_ids that are WGS. Used to decide on which libraries to keep the endogenous results for.
+library_strategy_table = ssf_table[["poseidon_IDs","library_name", "library_strategy"]].drop_duplicates()
+library_strategy_table = library_strategy_table[library_strategy_table.library_strategy == "WGS"]
+library_strategy_table['poseidon_IDs'] = library_strategy_table.poseidon_IDs.apply(lambda x: x.split(';'))
+library_strategy_table = library_strategy_table.explode('poseidon_IDs')
+library_strategy_table['minotaur_library_ID'] = library_strategy_table.poseidon_IDs+"_"+library_strategy_table.library_name
+library_strategy_table = library_strategy_table[["minotaur_library_ID", "library_strategy"]]
+
+## Merge the two tables, only keeping endogenous values for WGS libraries.
+endogenous_table = endogenous_table.merge(library_strategy_table, left_on="Library_ID", right_on="minotaur_library_ID", how='right').drop(columns=['minotaur_library_ID', 'library_strategy'])
 
 ## Prepare SNP coverage table for joining. Should always be on the sample level, so only need to fix column names.
 snp_coverage_table = snp_coverage_table.drop("Total_Snps", axis=1).rename(
@@ -286,6 +305,13 @@ compound_eager_table = (
         validate="many_to_one",
     )
     .merge(
+        ## Add endogenous DNA results per Library_ID
+        endogenous_table,
+        on="Library_ID",
+        validate="one_to_one",
+        how='left',
+    )
+    .merge(
         ## Add sex determination results per Sample_ID
         sex_determination_table,
         left_on="sexdet_bam_name",
@@ -320,6 +346,7 @@ compound_eager_table = (
 
 summarised_stats = pd.DataFrame()
 summarised_stats["Sample_Name"] = compound_eager_table["Sample_Name"].unique()
+## Contamination_Note: Add note about contamination estimation in libraries with more SNPs than the cutoff.
 summarised_stats = (
     compound_eager_table.astype("string")
     .groupby("Sample_Name")[["Contamination_Nr_SNPs"]]
@@ -343,6 +370,7 @@ summarised_stats = (
     .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
 )
 
+## Nr_Libraries: Count number of libraries per sample
 summarised_stats = (
     compound_eager_table.groupby("Sample_Name")[["Library_ID"]]
     .agg("nunique")
@@ -350,6 +378,7 @@ summarised_stats = (
     .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
 )
 
+## Contamination_Est: Calculated weighted mean across libraries of a sample.
 summarised_stats = (
     compound_eager_table.groupby("Sample_Name")[
         ["Contamination_Nr_SNPs", "Contamination_Est", "Contamination_SE", "n_reads"]
@@ -366,6 +395,7 @@ summarised_stats = (
     .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
 )
 
+## Contamination_SE: Calculated weighted mean across libraries of a sample.
 summarised_stats = (
     compound_eager_table.groupby("Sample_Name")[
         ["Contamination_Nr_SNPs", "Contamination_Est", "Contamination_SE", "n_reads"]
@@ -382,11 +412,12 @@ summarised_stats = (
     .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
 )
 
-## If Contamination column is not empty, add the contamination measure
+## Contamination_Meas: If Contamination column is not empty, add the contamination measure
 summarised_stats["Contamination_Meas"] = summarised_stats.apply(
     set_contamination_measure, axis=1
 )
 
+## Damage: Calculated weighted mean across libraries of a sample.
 summarised_stats = (
     compound_eager_table.groupby("Sample_Name")[["damage", "n_reads"]]
     .apply(
@@ -401,6 +432,17 @@ summarised_stats = (
     .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
 )
 
+## Endogenous: The maximum value of endogenous DNA across WGS libraries of a sample.
+summarised_stats = (
+    compound_eager_table.groupby("Sample_Name")["endogenous"]
+    .apply(
+        max,
+    )
+    .reset_index("Sample_Name")
+    .rename(columns={"endogenous": "Endogenous"})
+    .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
+)
+
 final_eager_table = compound_eager_table.merge(
     summarised_stats, on="Sample_Name", validate="many_to_one"
 ).drop(
@@ -411,6 +453,7 @@ final_eager_table = compound_eager_table.merge(
         "Contamination_SE",
         "n_reads",
         "damage",
+        "endogenous",
         "Original_library_names",
     ],
 )

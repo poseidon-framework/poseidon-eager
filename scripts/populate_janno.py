@@ -10,7 +10,7 @@ import re
 import numpy as np
 from collections import namedtuple
 
-VERSION = "0.2.0dev"
+VERSION = "0.2.1dev"
 
 
 def camel_to_snake(name):
@@ -99,27 +99,6 @@ class PoseidonYaml:
 
 
 ## Function to calculate weighted mean of a group from the weight and value columns specified.
-def weighted_mean(
-    group, wt_col="wt", val_col="val", filter_col="filter_col", min_val=100
-):
-    non_nan_indices = ~group[val_col].isna()
-    filter_indices = group[filter_col] >= min_val  ## Filter based on 'filter_col' >= 15
-    valid_indices = non_nan_indices & filter_indices
-
-    if valid_indices.any():
-        weighted_values = (
-            group.loc[valid_indices, wt_col] * group.loc[valid_indices, val_col]
-        )
-        total_weight = group.loc[
-            valid_indices, wt_col
-        ].sum()  # Calculate total weight without excluded weights
-        weighted_mean = weighted_values.sum() / total_weight
-    else:
-        weighted_mean = np.nan  # Return NaN if no valid values left
-
-    return weighted_mean
-
-
 def weighted_mean(
     group, wt_col="wt", val_col="val", filter_col="filter_col", min_val=100
 ):

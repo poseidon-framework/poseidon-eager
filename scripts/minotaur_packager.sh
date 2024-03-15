@@ -280,7 +280,8 @@ if [[ -d ${output_package_dir} ]] && [[ ! ${newest_genotype_fn} -nt ${output_pac
   errecho -y "[${package_name}]: Package is up to date."
   exit 0
 
-## If genotypes are new or the package does not exist, then create/update the package genotypes.
+## If the package does not exist, then create the package genotypes.
+## TODO-dev Once we go live this should be updated to apply to new packages only, and the updating should be moved to its own block.
 elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_package_dir}/${package_name}.bed ]] || [[ ${force_recreate} == "TRUE" ]]; then
   errecho -y "[${package_name}]: Genotypes are new or package does not exist. Creating/Updating package genotypes."
   make_genotype_dataset_out_of_genotypes "EIGENSTRAT" "${package_name}" "${tmp_dir}" ${genotype_fns[@]}
@@ -353,5 +354,6 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
 
   ## Partially fill empty fields in janno.
 # elif [[ 1 ]]; then
-  ## TODO Add package updating once that is needed. For now assum each package will be made once and that's it.
+  ## If genotypes are new and the package exists, then update the package.
+  ## TODO Add package updating once that is needed. For now assume each package will be made once and that's it.
 fi

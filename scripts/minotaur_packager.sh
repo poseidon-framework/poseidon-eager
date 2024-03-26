@@ -192,7 +192,23 @@ function add_ssf_file() {
 
   ## Copy the SSF file to the package directory
   errecho -y "[${package_name}]: Adding SSF file to package directory."
-  cp ${ssf_file_path} ${package_dir}/${ssf_name}
+  # cp ${ssf_file_path} ${package_dir}/${ssf_name}
+  awk 'BEGIN{FS=OFS="\t"} NR==1 { # Process header
+        for (i=1; i<=NF; i++) {
+            if ($i == "poseidon_IDs") {  # Use "poseidon_IDs" as the column name
+                col_index = i;
+                break;
+            }
+        }
+        print $0;
+    }
+    NR>1 {  # Process data rows
+        if (col_index > 0) {
+            gsub(/;/,"_MNT;",$col_index);
+            $col_index = $col_index "_MNT";
+        }
+        print $0;
+    }' ${ssf_file_path} > ${package_dir}/${ssf_name}
 }
 
 ## Parse CLI args.
@@ -306,11 +322,8 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
 
   ## Convert data to PLINK format
   errecho -y "[${package_name}] Converting data to PLINK format"
-  trident genoconvert -d ${tmp_dir}/package \
-    --genoFile ${tmp_dir}/package/${package_name}.geno \
-    --snpFile ${tmp_dir}/package/${package_name}.snp \
-    --indFile ${tmp_dir}/package/${package_name}.ind \
-    --inFormat EIGENSTRAT \
+  trident genoconvert \
+    -d ${tmp_dir}/package \
     --outFormat PLINK \
     --removeOld
 

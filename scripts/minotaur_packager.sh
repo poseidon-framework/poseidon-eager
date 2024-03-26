@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-VERSION='0.2.1dev'
+VERSION='0.2.2dev'
 set -o pipefail ## Pipefail, complain on new unassigned variables.
 # set -x ## Debugging
 
@@ -165,6 +165,36 @@ function add_versions_file() {
   echo " - Minotaur-packager version: ${VERSION}"                 >> ${version_fn}
 }
 
+## Function to add SSF file to minotaur package
+## usage add_ssf_file <ssf_file_path> <package_dir>
+function add_ssf_file() {
+  local ssf_file_path
+  local ssf_name
+  local package_dir
+  local package_name
+
+  ssf_file_path=${1}
+  ssf_name=${ssf_file_path##*/}
+  package_dir=${2}
+  package_name=${package_dir##*/}
+
+  ## Check that the SSF file exists.
+  if [[ ! -f ${ssf_file_path} ]]; then
+    errecho -r "[${package_name}]: SSF file '${ssf_file_path}' not found."
+    exit 1
+  fi
+
+  ## Ensure the provided package dir exists
+  if [[ ! -d ${package_dir} ]]; then
+    errecho -r "[${package_name}]: Package directory '${package_dir}' not found."
+    exit 1
+  fi
+
+  ## Copy the SSF file to the package directory
+  errecho -y "[${package_name}]: Adding SSF file to package directory."
+  cp ${ssf_file_path} ${package_dir}/${ssf_name}
+}
+
 ## Parse CLI args.
 TEMP=`getopt -q -o dhfv --long debug,help,force,version -n "${0}" -- "$@"`
 eval set -- "${TEMP}"
@@ -205,6 +235,7 @@ package_oven_dir="/mnt/archgen/poseidon/minotaur/minotaur-package-oven/" ## Hard
 output_package_dir="${package_oven_dir}/${package_name}" ## Hard-coded path for EVA
 finalisedtsv_fn="${package_minotaur_directory}/${package_name}.finalised.tsv"
 root_results_dir="${package_minotaur_directory}/results"
+minotaur_recipe_dir="/mnt/archgen/poseidon/minotaur/minotaur-recipes/packages/${package_name}" ## Hard-coded path for EVA
 
 ## Get current date for versioning
 errecho -y "[minotaur_packager.sh]: version ${VERSION}"
@@ -260,13 +291,17 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
 
   ## Fill in janno
   errecho -y "Populating janno file"
-  ${repo_dir}/scripts/populate_janno.py -r ${package_minotaur_directory}/results/ -t ${finalisedtsv_fn} -p ${tmp_dir}/package/POSEIDON.yml
+  ${repo_dir}/scripts/populate_janno.py -r ${package_minotaur_directory}/results/ -t ${finalisedtsv_fn} -p ${tmp_dir}/package/POSEIDON.yml -s ${minotaur_recipe_dir}/${package_name}.ssf
 
   ## TODO-dev Infer genetic sex from janno and mirror to ind file.
 
   ## Add Minotaur version info to README of package
   add_versions_file ${root_results_dir} ${tmp_dir}/package/README.md
   echo "readmeFile: README.md" >> ${tmp_dir}/package/POSEIDON.yml
+
+  ## Add SSF file to package
+  add_ssf_file ${minotaur_recipe_dir}/${package_name}.ssf ${tmp_dir}/package
+  echo "sequencingSourceFile: ${package_name}.ssf" >> ${tmp_dir}/package/POSEIDON.yml
 
   ## Convert data to PLINK format
   errecho -y "[${package_name}] Converting data to PLINK format"

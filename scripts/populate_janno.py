@@ -11,7 +11,7 @@ import numpy as np
 from collections import namedtuple
 
 VERSION = "0.2.1dev"
-
+EAGER_VERSION="2.4.6"
 
 def camel_to_snake(name):
     name = re.sub("(.)([A-Z][a-z]+)", r"\1_\2", name)
@@ -303,7 +303,6 @@ compound_eager_table = (
             "SeqType",
             "Organism",
             "Strandedness",
-            "UDG_Treatment",
             "R1",
             "R2",
             "BAM",
@@ -353,6 +352,28 @@ summarised_stats = (
     .agg("nunique")
     .rename(columns={"Library_ID": "Nr_Libraries"})
     .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
+)
+
+## Add UDG info by aggregating info to poseidon_ID level.
+## If more than one unique state exists in a group, return `mixed`
+agg_func = lambda group: group.iloc[0] if group.nunique() == 1 else 'mixed'
+summarised_stats = (
+    compound_eager_table.groupby("Sample_Name")[["UDG_Treatment"]]
+    .agg({'UDG_Treatment': agg_func})
+    .rename(columns={"UDG_Treatment": "UDG"})
+    .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
+)
+
+## Library_Built: Prepare table with Library_Built column. Infer from the SSF table.
+library_built_table = ssf_table[["poseidon_IDs","library_built"]].drop_duplicates()
+library_built_table['poseidon_IDs']=library_built_table.poseidon_IDs.apply(lambda x: x.split(';'))
+library_built_table = library_built_table.explode('poseidon_IDs')
+library_built_table['poseidon_IDs'] = library_built_table.poseidon_IDs.str.removesuffix("_MNT")
+
+summarised_stats = (
+    library_built_table.groupby("poseidon_IDs")[["library_built"]]
+    .agg({'library_built': agg_func})
+    .merge(summarised_stats, right_on="Sample_Name", left_on="poseidon_IDs",validate="one_to_one")
 )
 
 ## Contamination_Est: Calculated weighted mean across libraries of a sample.
@@ -431,6 +452,7 @@ final_eager_table = compound_eager_table.merge(
         "n_reads",
         "damage",
         "endogenous",
+        "UDG_Treatment",
         "Original_library_names",
     ],
 )
@@ -461,6 +483,10 @@ filled_janno_table = filled_janno_table.drop(
 
 ## Replace NAs with "n/a"
 filled_janno_table.replace(np.nan, "n/a", inplace=True)
+
+## Hard-coded values
+filled_janno_table["Data_Preparation_Pipeline_URL"] = f"https://github.com/nf-core/eager/releases/tag/{EAGER_VERSION}"
+filled_janno_table["Genotype_Ploidy"] = "haploid"
 
 final_column_order = [
     "Poseidon_ID",

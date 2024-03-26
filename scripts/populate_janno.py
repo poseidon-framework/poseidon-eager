@@ -117,6 +117,15 @@ def weighted_mean(
         weighted_mean = np.nan  # Return NaN if no valid values left
     return weighted_mean
 
+def library_strategy_to_capture_type(strategy):
+    if strategy == "WGS":
+        return "Shotgun"
+    elif strategy == "Targeted-Capture":
+        return "Capture"
+    elif strategy == "OTHER":
+        return "OtherCapture"
+    else:
+        return "n/a"
 
 parser = argparse.ArgumentParser(
     prog="populate_janno",
@@ -231,6 +240,13 @@ library_strategy_table = library_strategy_table[["minotaur_library_ID", "library
 
 ## Merge the two tables, only keeping endogenous values for WGS libraries.
 endogenous_table = endogenous_table.merge(library_strategy_table, left_on="Library_ID", right_on="minotaur_library_ID", how='right').drop(columns=['minotaur_library_ID', 'library_strategy'])
+
+## Prepare table with Library_Built column. Infer from the SSF table.
+library_built_table = ssf_table[["poseidon_IDs","library_built","library_strategy"]].drop_duplicates()
+library_built_table['poseidon_IDs']=library_built_table.poseidon_IDs.apply(lambda x: x.split(';'))
+library_built_table = library_built_table.explode('poseidon_IDs')
+library_built_table['poseidon_IDs'] = library_built_table.poseidon_IDs.str.removesuffix("_MNT")
+library_built_table['library_strategy'] = library_built_table.library_strategy.apply(library_strategy_to_capture_type)
 
 ## Prepare SNP coverage table for joining. Should always be on the sample level, so only need to fix column names.
 snp_coverage_table = snp_coverage_table.drop("Total_Snps", axis=1).rename(
@@ -354,7 +370,7 @@ summarised_stats = (
     .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
 )
 
-## Add UDG info by aggregating info to poseidon_ID level.
+## UDG: Add UDG info by aggregating info to poseidon_ID level.
 ## If more than one unique state exists in a group, return `mixed`
 agg_func = lambda group: group.iloc[0] if group.nunique() == 1 else 'mixed'
 summarised_stats = (
@@ -364,15 +380,10 @@ summarised_stats = (
     .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
 )
 
-## Library_Built: Prepare table with Library_Built column. Infer from the SSF table.
-library_built_table = ssf_table[["poseidon_IDs","library_built"]].drop_duplicates()
-library_built_table['poseidon_IDs']=library_built_table.poseidon_IDs.apply(lambda x: x.split(';'))
-library_built_table = library_built_table.explode('poseidon_IDs')
-library_built_table['poseidon_IDs'] = library_built_table.poseidon_IDs.str.removesuffix("_MNT")
-
+## Library_Built & CaptureType (inference is not great though)
 summarised_stats = (
-    library_built_table.groupby("poseidon_IDs")[["library_built"]]
-    .agg({'library_built': agg_func})
+    library_built_table.groupby("poseidon_IDs")[["library_built", 'library_strategy']]
+    .agg({'library_built': agg_func, 'library_strategy': lambda x: ";".join(x)})
     .merge(summarised_stats, right_on="Sample_Name", left_on="poseidon_IDs",validate="one_to_one")
 )
 

@@ -228,7 +228,7 @@ library_strategy_table = ssf_table[["poseidon_IDs","library_name", "library_stra
 library_strategy_table = library_strategy_table[library_strategy_table.library_strategy == "WGS"]
 library_strategy_table['poseidon_IDs'] = library_strategy_table.poseidon_IDs.apply(lambda x: x.split(';'))
 library_strategy_table = library_strategy_table.explode('poseidon_IDs')
-library_strategy_table['minotaur_library_ID'] = library_strategy_table.poseidon_IDs+"_"+library_strategy_table.library_name
+library_strategy_table['minotaur_library_ID'] = library_strategy_table.poseidon_IDs.str.removesuffix("_MNT")+"_"+library_strategy_table.library_name
 library_strategy_table = library_strategy_table[["minotaur_library_ID", "library_strategy"]]
 
 ## Merge the two tables, only keeping endogenous values for WGS libraries.
@@ -262,7 +262,7 @@ sex_determination_table = sex_determination_table[
     ["id", "RateX", "RateY", "RateErrX", "RateErrY"]
 ]
 
-## Merge all eager tables together (exclude endogenous for now).
+## Merge all eager tables together
 compound_eager_table = (
     pd.DataFrame.merge(
         tsv_table,
@@ -450,6 +450,7 @@ for col in [
     "Contamination_Note",
     "Library_Names",
     "Contamination_Meas",
+    "Endogenous",
 ]:
     filled_janno_table[col] = (
         filled_janno_table[[col + "_x", col + "_y"]].bfill(axis=1).iloc[:, 0]

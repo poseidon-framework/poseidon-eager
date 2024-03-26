@@ -218,8 +218,6 @@ damage_table = damage_table[["Library_ID", "n_reads", "dmg_5p_1bp"]].rename(
 )
 
 ## Prepare endogenous table for joining. Should be max value in cases where multiple libraries are merged. But also, should be SG data ONLY, which is unlikely to work well with ENA datasets where TF and SG reads might be merged.
-## TODO-dev Decide on how to get keep only SG data. The SSF Could be used to filter.
-## NOTE: for now, endogenous DNA is ignored, as inference of SG/TF is difficult.
 endogenous_table = endogenous_table[["id", "endogenous_dna"]].rename(
     columns={"id": "Library_ID", "endogenous_dna": "endogenous"}
 )

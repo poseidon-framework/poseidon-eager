@@ -5,6 +5,7 @@ eager/
 array_Logs/
 array_tempfiles/
 testing_assets/
+packages/
 poseidon_packages/
 .tmp/
 packages/

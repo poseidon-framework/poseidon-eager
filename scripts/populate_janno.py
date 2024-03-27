@@ -248,6 +248,33 @@ library_built_table = library_built_table.explode('poseidon_IDs')
 library_built_table['poseidon_IDs'] = library_built_table.poseidon_IDs.str.removesuffix("_MNT")
 library_built_table['library_strategy'] = library_built_table.library_strategy.apply(library_strategy_to_capture_type)
 
+## Prepare Genetic_Source Accession IDs. Infer from SSF table.
+def unique_values_join(x, sep=';'):
+    return sep.join(x.unique())
+
+accession_table = ssf_table[["poseidon_IDs", "study_accession", "run_accession", "secondary_sample_accession"]].drop_duplicates()
+accession_table['poseidon_IDs'] = accession_table.poseidon_IDs.apply(lambda x: x.split(';'))
+accession_table = accession_table.explode('poseidon_IDs')
+accession_table['poseidon_IDs'] = accession_table.poseidon_IDs.str.removesuffix("_MNT")
+accession_table = accession_table.groupby('poseidon_IDs').agg({
+        'study_accession': unique_values_join,
+        'run_accession': unique_values_join,
+        'secondary_sample_accession': unique_values_join,
+    })
+column_order = ['study_accession', 'secondary_sample_accession', 'run_accession']
+accession_table['Genetic_Source_Accession_IDs'] = accession_table.apply(
+    lambda row: ';'.join(row[column_order]),
+    axis=1
+    )
+accession_table = accession_table.drop(
+    [
+        'study_accession',
+        'secondary_sample_accession',
+        'run_accession',
+    ],
+    axis=1,
+).reset_index()
+
 ## Prepare SNP coverage table for joining. Should always be on the sample level, so only need to fix column names.
 snp_coverage_table = snp_coverage_table.drop("Total_Snps", axis=1).rename(
     columns={"id": "Sample_ID", "Covered_Snps": "Nr_SNPs"}
@@ -276,7 +303,7 @@ sex_determination_table = sex_determination_table[
     ["id", "RateX", "RateY", "RateErrX", "RateErrY"]
 ]
 
-## Merge all eager tables together
+## Merge all eager tables together (plus SSF table summarised attribute: Genetic_Source_Accession_IDs)
 compound_eager_table = (
     pd.DataFrame.merge(
         tsv_table,
@@ -311,6 +338,13 @@ compound_eager_table = (
         right_on="id",
         validate="many_to_one",
     )
+    .merge(
+        ## Add Genetic_Source_Accession_IDs summarised column
+        accession_table,
+        left_on="Sample_Name",
+        right_on="poseidon_IDs",
+        validate="many_to_one",
+    )
     .drop(
         ## Drop columns that are not relevant anymore
         [
@@ -330,6 +364,7 @@ compound_eager_table = (
             "sexdet_bam_name",
             "Sample_ID",
             "id",
+            "poseidon_IDs",
         ],
         axis=1,
     )

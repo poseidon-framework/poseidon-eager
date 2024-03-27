@@ -10,7 +10,7 @@ import re
 import numpy as np
 from collections import namedtuple
 
-VERSION = "0.2.1dev"
+VERSION = "0.3.0dev"
 EAGER_VERSION="2.4.6"
 
 def camel_to_snake(name):

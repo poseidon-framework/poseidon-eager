@@ -462,6 +462,7 @@ summarised_stats = (
         left_on="poseidon_IDs",
         validate="one_to_one",
     )
+    .rename(columns={"library_built": "Library_Built", "library_strategy": "Capture_Type"})
 )
 
 ## Contamination_Est: Calculated weighted mean across libraries of a sample.

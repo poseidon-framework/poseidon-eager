@@ -125,6 +125,7 @@ function add_versions_file() {
   local capture_type_version
   local capture_type_version_string
   local pipeline_report_fn
+  local populate_janno_version
 
   ## Read in function params
   package_eager_result_dir=${1}
@@ -149,6 +150,7 @@ function add_versions_file() {
 
   config_version=$(grep "config_template_version" ${pipeline_report_fn} | awk -F ' ' '{print $NF}')
   package_config_version=$(grep "package_config_version" ${pipeline_report_fn} | awk -F ' ' '{print $NF}')
+  populate_janno_version=$(${repo_dir}/scripts/populate_janno.py -v)
 
   errecho -y "[${package_name}]: Writing version info to '${version_fn}'."
   ## Create the versions file. Flush any old file contents if the file exists.
@@ -163,6 +165,7 @@ function add_versions_file() {
   echo " - Config template version: ${config_version}"            >> ${version_fn}
   echo " - Package config version: ${package_config_version}"     >> ${version_fn}
   echo " - Minotaur-packager version: ${VERSION}"                 >> ${version_fn}
+  echo " - populate_janno.py version: ${populate_janno_version}"  >> ${version_fn}
 }
 
 ## Function to add SSF file to minotaur package

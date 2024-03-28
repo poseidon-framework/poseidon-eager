@@ -155,7 +155,7 @@ function add_versions_file() {
   errecho -y "[${package_name}]: Writing version info to '${version_fn}'."
   ## Create the versions file. Flush any old file contents if the file exists.
   echo "# ${package_name}"                                        > ${version_fn}
-  echo "This package was created on $(date +'%Y-%M-%d') and was processed using the following versions:" >> ${version_fn}
+  echo "This package was created on $(date +'%Y-%m-%d') and was processed using the following versions:" >> ${version_fn}
   echo " - nf-core/eager version: ${eager_version}"               >> ${version_fn}
   echo " - Minotaur config version: ${minotaur_version}"          >> ${version_fn}
   if [[ ! -z ${capture_type_version_string} ]]; then

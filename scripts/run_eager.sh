@@ -40,22 +40,27 @@ while true ; do
     esac
 done
 
+
+## Hard-coded local paths to minotaur resources
+local_minotaur_recipes="/mnt/archgen/poseidon/minotaur/minotaur-recipes"
+local_poseidon_eager="/mnt/archgen/poseidon/poseidon-eager"
+
 if [[ ${debug} == "TRUE" ]]; then
     echo -e "[run_eager.sh]: DEBUG activated. CLI argument parsing is not included in debug output."
     set -x
 fi
 
 ## Hard-coded params
-repo_dir='/mnt/archgen/poseidon/poseidon-eager'
+# repo_dir='/mnt/archgen/poseidon/poseidon-eager'
 nxf_path="/mnt/archgen/tools/nextflow/22.04.5.5708/" ## Use centarlly installed version
 eager_version='2.4.6'
-root_eager_dir="${repo_dir}/eager/"
-root_package_dir="${repo_dir}/packages/"
+root_eager_dir="${local_poseidon_eager}/eager/"
+root_package_dir="${local_minotaur_recipes}/packages/"
 nextflow_profiles="eva,archgen,big_data,eva_local_paths"
-tower_config="${repo_dir}/.nextflow_tower.conf" ## Optional tower.nf configuration
-array_temp_fn_dir="${repo_dir}/array_tempfiles"
-array_logs_dir="${repo_dir}/array_Logs"
-submit_as_array_script="${repo_dir}/scripts/submit_as_array.sh"
+tower_config="${local_poseidon_eager}/.nextflow_tower.conf" ## Optional tower.nf configuration
+array_temp_fn_dir="${local_poseidon_eager}/array_tempfiles"
+array_logs_dir="${local_poseidon_eager}/array_Logs"
+submit_as_array_script="${local_poseidon_eager}/scripts/submit_as_array.sh"
 
 ## Flood execution. Useful for testing/fast processing of small batches.
 if [[ ${array} == 'TRUE' ]]; then

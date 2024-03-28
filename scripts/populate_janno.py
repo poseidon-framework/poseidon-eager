@@ -561,6 +561,8 @@ for col in [
     "Library_Names",
     "Contamination_Meas",
     "Endogenous",
+    "Library_Built",
+    "Capture_Type",
     "UDG",
     "Genetic_Source_Accession_IDs",
 ]:

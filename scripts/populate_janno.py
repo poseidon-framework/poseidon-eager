@@ -10,7 +10,7 @@ import re
 import numpy as np
 from collections import namedtuple
 
-VERSION = "0.3.0dev"
+VERSION = "0.3.1dev"
 EAGER_VERSION = "2.4.6"
 
 
@@ -131,6 +131,17 @@ def library_strategy_to_capture_type(strategy):
     else:
         return "n/a"
 
+def udg_treatment_to_udg(df):
+    if df['UDG_Treatment'] == "none":
+        return "minus"
+    elif df['UDG_Treatment'] == "half":
+        return "half"
+    elif df['UDG_Treatment'] == "full":
+        return "plus"
+    elif df['UDG_Treatment'] == "mixed":
+        return "mixed"
+    else:
+        return "n/a"
 
 parser = argparse.ArgumentParser(
     prog="populate_janno",
@@ -448,6 +459,7 @@ agg_func = lambda group: group.iloc[0] if group.nunique() == 1 else "mixed"
 summarised_stats = (
     compound_eager_table.groupby("Sample_Name")[["UDG_Treatment"]]
     .agg({"UDG_Treatment": agg_func})
+    .apply(udg_treatment_to_udg, axis=1)
     .rename(columns={"UDG_Treatment": "UDG"})
     .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
 )

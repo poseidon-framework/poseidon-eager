@@ -10,7 +10,7 @@ import re
 import numpy as np
 from collections import namedtuple
 
-VERSION = "0.3.1dev"
+VERSION = "0.3.2dev"
 EAGER_VERSION = "2.4.6"
 
 
@@ -121,16 +121,19 @@ def weighted_mean(
     return weighted_mean
 
 
-def library_strategy_to_capture_type(strategy):
-    if strategy == "WGS":
+## Function to convert library strategy to poseidon CaptureType
+def library_strategy_to_capture_type(df, strategy_col, snp_set):
+    if df[strategy_col] == "WGS":
         return "Shotgun"
-    elif strategy == "Targeted-Capture":
-        return "Capture"
-    elif strategy == "OTHER":
+    elif df[strategy_col] == "Targeted-Capture":
+        return snp_set
+    elif df[strategy_col] == "OTHER":
         return "OtherCapture"
     else:
         return "n/a"
 
+
+## Function to convert UDG_Treatment to poseidon UDG
 def udg_treatment_to_udg(df):
     if df['UDG_Treatment'] == "none":
         df['UDG_Treatment'] = "minus"
@@ -144,6 +147,25 @@ def udg_treatment_to_udg(df):
         df['UDG_Treatment'] = "n/a"
     return df
 
+
+## Function to add suffix to column X when column y is equal to target.
+def add_suffix_if(df, x, y, if_y, suffix="_ss"):
+    if df[y] == if_y:
+        df[x] = df[x] + suffix
+    return df
+
+## Function to convert poseidon_ID and Library_ID to minotaur_library_ID
+def infer_minotaur_library_id(df):
+    ## remove _MNT suffix, then add _ss if the library_built column is ss.
+    df['new_poseidon_IDs'] = df.poseidon_IDs.str.removesuffix("_MNT")
+    df['new_library_name'] = df.library_name
+    df = df.apply(add_suffix_if, axis=1, args=("new_poseidon_IDs", "library_built", "ss", "_ss"))
+    df = df.apply(add_suffix_if, axis=1, args=("new_library_name", "library_built", "ss", "_ss"))
+    df['minotaur_library_ID'] = df.new_poseidon_IDs + '_' + df.new_library_name
+    return df
+
+
+## Argument parsing
 parser = argparse.ArgumentParser(
     prog="populate_janno",
     description="This script reads in different nf-core/eager result files and"
@@ -248,8 +270,9 @@ endogenous_table = endogenous_table[["id", "endogenous_dna"]].rename(
     columns={"id": "Library_ID", "endogenous_dna": "endogenous"}
 )
 ## Get df with minotaur_library_ids that are WGS. Used to decide on which libraries to keep the endogenous results for.
+##  the strandedness of the library is also used to infer the minotaur_library_id.
 library_strategy_table = ssf_table[
-    ["poseidon_IDs", "library_name", "library_strategy"]
+    ["poseidon_IDs", "library_name", "library_strategy", "library_built"]
 ].drop_duplicates()
 library_strategy_table = library_strategy_table[
     library_strategy_table.library_strategy == "WGS"
@@ -258,10 +281,10 @@ library_strategy_table["poseidon_IDs"] = library_strategy_table.poseidon_IDs.app
     lambda x: x.split(";")
 )
 library_strategy_table = library_strategy_table.explode("poseidon_IDs")
-library_strategy_table["minotaur_library_ID"] = (
-    library_strategy_table.poseidon_IDs.str.removesuffix("_MNT")
-    + "_"
-    + library_strategy_table.library_name
+library_strategy_table = infer_minotaur_library_id(library_strategy_table).apply(
+    add_suffix_if,
+    axis=1,
+    args=("poseidon_IDs","library_built","ss")
 )
 library_strategy_table = library_strategy_table[
     ["minotaur_library_ID", "library_strategy"]
@@ -286,10 +309,17 @@ library_built_table = library_built_table.explode("poseidon_IDs")
 library_built_table["poseidon_IDs"] = library_built_table.poseidon_IDs.str.removesuffix(
     "_MNT"
 )
-library_built_table["library_strategy"] = library_built_table.library_strategy.apply(
-    library_strategy_to_capture_type
+library_built_table = library_built_table.apply(
+    add_suffix_if,
+    axis=1,
+    args=("poseidon_IDs", "library_built", "ss", "_ss"),
 )
 
+library_built_table["library_strategy"] = library_built_table.apply(
+    library_strategy_to_capture_type,
+    args=('library_strategy', poseidon_yaml_data.genotype_data.snp_set),
+    axis=1,
+)
 
 ## Prepare Genetic_Source Accession IDs. Infer from SSF table.
 def unique_values_join(x, sep=";"):
@@ -297,13 +327,14 @@ def unique_values_join(x, sep=";"):
 
 
 accession_table = ssf_table[
-    ["poseidon_IDs", "study_accession", "run_accession", "secondary_sample_accession"]
+    ["poseidon_IDs", "study_accession", "run_accession", "secondary_sample_accession", "library_built"]
 ].drop_duplicates()
 accession_table["poseidon_IDs"] = accession_table.poseidon_IDs.apply(
     lambda x: x.split(";")
 )
 accession_table = accession_table.explode("poseidon_IDs")
 accession_table["poseidon_IDs"] = accession_table.poseidon_IDs.str.removesuffix("_MNT")
+accession_table = accession_table.apply(add_suffix_if, axis=1, args=("poseidon_IDs", "library_built", "ss", "_ss"))
 accession_table = accession_table.groupby("poseidon_IDs").agg(
     {
         "study_accession": unique_values_join,
@@ -377,7 +408,7 @@ compound_eager_table = (
         ## Add endogenous DNA results per Library_ID
         endogenous_table,
         on="Library_ID",
-        validate="one_to_one",
+        validate="many_to_one",
         how="left",
     )
     .merge(

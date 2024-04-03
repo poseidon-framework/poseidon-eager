@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-VERSION='0.2.2dev'
+VERSION='0.3.0dev'
 set -o pipefail ## Pipefail, complain on new unassigned variables.
 # set -x ## Debugging
 
@@ -199,16 +199,23 @@ function add_ssf_file() {
   awk 'BEGIN{FS=OFS="\t"} NR==1 { # Process header
         for (i=1; i<=NF; i++) {
             if ($i == "poseidon_IDs") {  # Use "poseidon_IDs" as the column name
-                col_index = i;
-                break;
+                poseidon_col_index = i;
+            }
+            if ($i == "library_built") {  # Use "library_built" as the column name
+                library_col_index = i;
             }
         }
-        print $0;
+        print $0; # Print header
     }
     NR>1 {  # Process data rows
-        if (col_index > 0) {
-            gsub(/;/,"_MNT;",$col_index);
-            $col_index = $col_index "_MNT";
+        if (poseidon_col_index > 0 && library_col_index > 0) {
+            if ($library_col_index == "ss") {
+                gsub(/;/,"_MNT;",$poseidon_col_index);
+                $poseidon_col_index = $poseidon_col_index "_ss_MNT";
+            } else {
+                gsub(/;/,"_MNT;",$poseidon_col_index);
+                $poseidon_col_index = $poseidon_col_index "_MNT";
+            }
         }
         print $0;
     }' ${ssf_file_path} > ${package_dir}/${ssf_name}

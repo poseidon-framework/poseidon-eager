@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-VERSION='0.2.1dev'
+VERSION='0.3.0dev'
 set -o pipefail ## Pipefail, complain on new unassigned variables.
 # set -x ## Debugging
 
@@ -125,6 +125,7 @@ function add_versions_file() {
   local capture_type_version
   local capture_type_version_string
   local pipeline_report_fn
+  local populate_janno_version
 
   ## Read in function params
   package_eager_result_dir=${1}
@@ -134,34 +135,94 @@ function add_versions_file() {
   eager_version=$(grep "Pipeline Release:" ${pipeline_report_fn} | awk -F ":" '{print $NF}')
 
   ## Each attribute now comes in its own line. (0.2.0dev +)
-  minotaur_version=$(grep "Minortaur.config" ${pipeline_report_fn} | awk -F ' ' '{print $NF}')
-  ## TODO-dev un-hard-code 1240K config (future packages will have the keyword "CaptureType.XXXX.config")
-  capture_type_version_string=$(grep "1240K.config" ${pipeline_report_fn})
+  minotaur_version=$(grep "Minotaur.config" ${pipeline_report_fn} | awk -F ' ' '{print $NF}')
+  capture_type_version_string=$(grep '^ - CaptureType\.[0-9A-Za-z]*\.config' ${pipeline_report_fn})
   ## If the grep above returned nothing, then there is no Capture Type profile.
   if [[ -z ${capture_type_version_string} ]]; then
+    errecho -y "[${package_name}]: No CaptureType profile used for package."
     capture_type_version=''
     capture_type_config=''
   else
     capture_type_version=$(echo ${capture_type_version_string} | awk -F ' ' '{print $NF}')
-    capture_type_config="1240K" ## TODO-dev un-hard-code 1240K config (future packages will have the keyword "CaptureType.XXXX.config")
+    capture_type_config=$(echo ${capture_type_version_string} | awk -F '.' '{print $2}') ## If there is a capture type profile, it is the second field in the string, surrounded by '.'.
+    errecho -y "[${package_name}]: Package was processed using the ${capture_type_config} CaptureType profile, with version ${capture_type_version}."
   fi
 
   config_version=$(grep "config_template_version" ${pipeline_report_fn} | awk -F ' ' '{print $NF}')
   package_config_version=$(grep "package_config_version" ${pipeline_report_fn} | awk -F ' ' '{print $NF}')
+  populate_janno_version=$(${repo_dir}/scripts/populate_janno.py -v)
 
+  errecho -y "[${package_name}]: Writing version info to '${version_fn}'."
   ## Create the versions file. Flush any old file contents if the file exists.
-  echo "nf-core/eager version: ${eager_version}"              >  ${version_fn}
-  echo "Minotaur config version: ${minotaur_version}"         >> ${version_fn}
+  echo "# ${package_name}"                                        > ${version_fn}
+  echo "This package was created on $(date +'%Y-%m-%d') and was processed using the following versions:" >> ${version_fn}
+  echo " - nf-core/eager version: ${eager_version}"               >> ${version_fn}
+  echo " - Minotaur config version: ${minotaur_version}"          >> ${version_fn}
   if [[ ! -z ${capture_type_version_string} ]]; then
-    echo "CaptureType profile: ${capture_type_config} ${capture_type_version}" >> ${version_fn}
+    echo " - CaptureType profile: ${capture_type_config}"         >> ${version_fn}
+    echo " - CaptureType config version: ${capture_type_version}" >> ${version_fn}
   fi
-  echo "Config template version: ${config_version}"           >> ${version_fn}
-  echo "Package config version: ${package_config_version}"    >> ${version_fn}
-  echo "Minotaur-packager version: ${VERSION}"                >> ${version_fn}
+  echo " - Config template version: ${config_version}"            >> ${version_fn}
+  echo " - Package config version: ${package_config_version}"     >> ${version_fn}
+  echo " - Minotaur-packager version: ${VERSION}"                 >> ${version_fn}
+  echo " - populate_janno.py version: ${populate_janno_version}"  >> ${version_fn}
+}
+
+## Function to add SSF file to minotaur package
+## usage add_ssf_file <ssf_file_path> <package_dir>
+function add_ssf_file() {
+  local ssf_file_path
+  local ssf_name
+  local package_dir
+  local package_name
+
+  ssf_file_path=${1}
+  ssf_name=${ssf_file_path##*/}
+  package_dir=${2}
+  package_name=${package_dir##*/}
+
+  ## Check that the SSF file exists.
+  if [[ ! -f ${ssf_file_path} ]]; then
+    errecho -r "[${package_name}]: SSF file '${ssf_file_path}' not found."
+    exit 1
+  fi
+
+  ## Ensure the provided package dir exists
+  if [[ ! -d ${package_dir} ]]; then
+    errecho -r "[${package_name}]: Package directory '${package_dir}' not found."
+    exit 1
+  fi
+
+  ## Copy the SSF file to the package directory
+  errecho -y "[${package_name}]: Adding SSF file to package directory."
+  # cp ${ssf_file_path} ${package_dir}/${ssf_name}
+  awk 'BEGIN{FS=OFS="\t"} NR==1 { # Process header
+        for (i=1; i<=NF; i++) {
+            if ($i == "poseidon_IDs") {  # Use "poseidon_IDs" as the column name
+                poseidon_col_index = i;
+            }
+            if ($i == "library_built") {  # Use "library_built" as the column name
+                library_col_index = i;
+            }
+        }
+        print $0; # Print header
+    }
+    NR>1 {  # Process data rows
+        if (poseidon_col_index > 0 && library_col_index > 0) {
+            if ($library_col_index == "ss") {
+                gsub(/;/,"_MNT;",$poseidon_col_index);
+                $poseidon_col_index = $poseidon_col_index "_ss_MNT";
+            } else {
+                gsub(/;/,"_MNT;",$poseidon_col_index);
+                $poseidon_col_index = $poseidon_col_index "_MNT";
+            }
+        }
+        print $0;
+    }' ${ssf_file_path} > ${package_dir}/${ssf_name}
 }
 
 ## Parse CLI args.
-TEMP=`getopt -q -o dhv --long debug,help,version -n "${0}" -- "$@"`
+TEMP=`getopt -q -o dhfv --long debug,help,force,version -n "${0}" -- "$@"`
 eval set -- "${TEMP}"
 
 ## Parameter defaults
@@ -173,6 +234,8 @@ eval set -- "${TEMP}"
 ##     ├── results/                       ## nf-core/eager results directory
 ##     └── work/                          ## Netxtflow work directory
 package_minotaur_directory=''
+force_recreate="FALSE"
+debug_mode=0
 
 ## Print helptext and exit when no option is provided.
 if [[ "${#@}" == "1" ]]; then
@@ -185,6 +248,7 @@ while true ; do
   case "$1" in
     -h|--help)          Helptext; exit 0 ;;
     -v|--version)       echo ${VERSION}; exit 0;;
+    -f|--force)         force_recreate="TRUE"; errecho -r "[minotaur_packager.sh]: Forcing package recreation."; shift ;;
     -d|--debug)         errecho -y "[minotaur_packager.sh]: Debug mode activated."; debug_mode=1; shift ;;
     --)                 package_minotaur_directory="${2%/}"; break ;;
     *)                  echo -e "invalid option provided.\n"; Helptext; exit 1;;
@@ -197,6 +261,7 @@ package_oven_dir="/mnt/archgen/poseidon/minotaur/minotaur-package-oven/" ## Hard
 output_package_dir="${package_oven_dir}/${package_name}" ## Hard-coded path for EVA
 finalisedtsv_fn="${package_minotaur_directory}/${package_name}.finalised.tsv"
 root_results_dir="${package_minotaur_directory}/results"
+minotaur_recipe_dir="/mnt/archgen/poseidon/minotaur/minotaur-recipes/packages/${package_name}" ## Hard-coded path for EVA
 
 ## Get current date for versioning
 errecho -y "[minotaur_packager.sh]: version ${VERSION}"
@@ -237,12 +302,13 @@ if [[ ! -z $(all_x_in_y 1 ${snp_set} ${#supported_snpsets[@]} ${supported_snpset
 fi
 
 ## If the package exists and the genotypes are not newer than the package, then print a message and do nothing.
-if [[ -d ${output_package_dir} ]] && [[ ! ${newest_genotype_fn} -nt ${output_package_dir}/${package_name}.geno ]]; then
+if [[ -d ${output_package_dir} ]] && [[ ! ${newest_genotype_fn} -nt ${output_package_dir}/${package_name}.bed ]] && [[ ${force_recreate} != "TRUE" ]]; then
   errecho -y "[${package_name}]: Package is up to date."
   exit 0
 
-## If genotypes are new or the package does not exist, then create/update the package genotypes.
-elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_package_dir}/${package_name}.geno ]]; then
+## If the package does not exist, then create the package genotypes.
+## TODO-dev Once we go live this should be updated to apply to new packages only, and the updating should be moved to its own block.
+elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_package_dir}/${package_name}.bed ]] || [[ ${force_recreate} == "TRUE" ]]; then
   errecho -y "[${package_name}]: Genotypes are new or package does not exist. Creating/Updating package genotypes."
   make_genotype_dataset_out_of_genotypes "EIGENSTRAT" "${package_name}" "${tmp_dir}" ${genotype_fns[@]}
 
@@ -251,21 +317,28 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
   check_fail $? "[${package_name}]: Failed to initialise package. Aborting."
 
   ## Fill in janno
-  errecho -y "Populating janno file"
-  ${repo_dir}/scripts/populate_janno.py -r ${package_minotaur_directory}/results/ -t ${finalisedtsv_fn} -p ${tmp_dir}/package/POSEIDON.yml
+  errecho -y "[${package_name}]: Populating janno file"
+  ${repo_dir}/scripts/populate_janno.py -r ${package_minotaur_directory}/results/ -t ${finalisedtsv_fn} -p ${tmp_dir}/package/POSEIDON.yml -s ${minotaur_recipe_dir}/${package_name}.ssf
 
   ## TODO-dev Infer genetic sex from janno and mirror to ind file.
 
+  ## Add Minotaur version info to README of package
+  add_versions_file ${root_results_dir} ${tmp_dir}/package/README.md
+  echo "readmeFile: README.md" >> ${tmp_dir}/package/POSEIDON.yml
+
+  ## Add SSF file to package
+  add_ssf_file ${minotaur_recipe_dir}/${package_name}.ssf ${tmp_dir}/package
+  echo "sequencingSourceFile: ${package_name}.ssf" >> ${tmp_dir}/package/POSEIDON.yml
+
   ## Convert data to PLINK format
-  trident genoconvert -d ${tmp_dir}/package \
-    --genoFile ${tmp_dir}/package/${package_name}.geno \
-    --snpFile ${tmp_dir}/package/${package_name}.snp \
-    --indFile ${tmp_dir}/package/${package_name}.ind \
-    --inFormat EIGENSTRAT \
+  errecho -y "[${package_name}] Converting data to PLINK format"
+  trident genoconvert \
+    -d ${tmp_dir}/package \
     --outFormat PLINK \
     --removeOld
 
   ## Update the package yaml to account for the changes in the janno (update renamed to rectify)
+  errecho -y "[${package_name}] Rectifying package"
   trident rectify -d ${tmp_dir}/package \
     --packageVersion Patch \
     --logText "Automatic update of janno file from Minotaur processing." \
@@ -273,23 +346,26 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
     ## TODO Add poseidon core team, or Minotaur as contributors?
 
   ## Validate the resulting package
+  errecho -y "[${package_name}] Validating package"
   trident validate -d ${tmp_dir}/package
 
     ## Only move package dir to "package oven" if validation passed
   if [[ $? == 0 ]] && [[ ${debug_mode} -ne 1 ]]; then
-    errecho -y "## Moving '${package_name}' to package oven ##"
     ## Create directory for poseidon package in package oven
     ##  Only created now to not trip up the script if execution did not run through fully.
     mkdir -p $(dirname ${output_package_dir})
 
-    ## Add Minotaur versioning file to package
-    add_versions_file ${root_results_dir} ${tmp_dir}/package/versions.txt
-
+    ## If the package directory already exists, remove it
+    if [[ -d ${output_package_dir} ]]; then
+      errecho -y "[${package_name}] Removing old package directory"
+      rm -r ${output_package_dir}
+    fi
     ## Move package contents to the oven
+    errecho -y "[${package_name}]  Moving '${package_name}' dough to package oven"
     mv ${tmp_dir}/package/ ${output_package_dir}
 
     ## Then remove remaining temp files
-    errecho -y "## Removing temp directory ##"
+    errecho -y "[${package_name}] Removing temp directory"
 
     ## Paranoid of removing in root, so extra check for tmp_dir
     if [[ ! -z ${tmp_dir} ]]; then
@@ -301,5 +377,6 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
 
   ## Partially fill empty fields in janno.
 # elif [[ 1 ]]; then
-  ## TODO Add package updating once that is needed. For now assum each package will be made once and that's it.
+  ## If genotypes are new and the package exists, then update the package.
+  ## TODO Add package updating once that is needed. For now assume each package will be made once and that's it.
 fi

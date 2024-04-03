@@ -10,7 +10,8 @@ import re
 import numpy as np
 from collections import namedtuple
 
-VERSION = "0.2.0dev"
+VERSION = "0.3.2dev"
+EAGER_VERSION = "2.4.6"
 
 
 def camel_to_snake(name):
@@ -36,12 +37,14 @@ def infer_library_name(row, prefix_col=None, target_col=None):
 
     return inferred_name
 
+
 def set_contamination_measure(row):
     ## If the row's contamination is not NaN, then set to "ANGSD", otherwise NaN
     if not pd.isna(row["Contamination"]):
-        return "ANGSD[v0.935]" ## TODO-dev infer the version from eager software_versions.txt
+        return "ANGSD[v0.935]"  ## TODO-dev infer the version from eager software_versions.txt
     else:
         return np.nan
+
 
 ## Function that takes a pd.DataFrame and the name of a column, and applies the format to it to add a new column named poseidon_id
 class PoseidonYaml:
@@ -103,27 +106,6 @@ def weighted_mean(
     group, wt_col="wt", val_col="val", filter_col="filter_col", min_val=100
 ):
     non_nan_indices = ~group[val_col].isna()
-    filter_indices = group[filter_col] >= min_val  ## Filter based on 'filter_col' >= 15
-    valid_indices = non_nan_indices & filter_indices
-
-    if valid_indices.any():
-        weighted_values = (
-            group.loc[valid_indices, wt_col] * group.loc[valid_indices, val_col]
-        )
-        total_weight = group.loc[
-            valid_indices, wt_col
-        ].sum()  # Calculate total weight without excluded weights
-        weighted_mean = weighted_values.sum() / total_weight
-    else:
-        weighted_mean = np.nan  # Return NaN if no valid values left
-
-    return weighted_mean
-
-
-def weighted_mean(
-    group, wt_col="wt", val_col="val", filter_col="filter_col", min_val=100
-):
-    non_nan_indices = ~group[val_col].isna()
     filter_indices = group[filter_col] >= min_val  ## Remove values below the cutoff
     valid_indices = non_nan_indices & filter_indices
     if valid_indices.any():
@@ -139,6 +121,51 @@ def weighted_mean(
     return weighted_mean
 
 
+## Function to convert library strategy to poseidon CaptureType
+def library_strategy_to_capture_type(df, strategy_col, snp_set):
+    if df[strategy_col] == "WGS":
+        return "Shotgun"
+    elif df[strategy_col] == "Targeted-Capture":
+        return snp_set
+    elif df[strategy_col] == "OTHER":
+        return "OtherCapture"
+    else:
+        return "n/a"
+
+
+## Function to convert UDG_Treatment to poseidon UDG
+def udg_treatment_to_udg(df):
+    if df['UDG_Treatment'] == "none":
+        df['UDG_Treatment'] = "minus"
+    elif df['UDG_Treatment'] == "half":
+        df['UDG_Treatment'] = "half"
+    elif df['UDG_Treatment'] == "full":
+        df['UDG_Treatment'] = "plus"
+    elif df['UDG_Treatment'] == "mixed":
+        df['UDG_Treatment'] = "mixed"
+    else:
+        df['UDG_Treatment'] = "n/a"
+    return df
+
+
+## Function to add suffix to column X when column y is equal to target.
+def add_suffix_if(df, x, y, if_y, suffix="_ss"):
+    if df[y] == if_y:
+        df[x] = df[x] + suffix
+    return df
+
+## Function to convert poseidon_ID and Library_ID to minotaur_library_ID
+def infer_minotaur_library_id(df):
+    ## remove _MNT suffix, then add _ss if the library_built column is ss.
+    df['new_poseidon_IDs'] = df.poseidon_IDs.str.removesuffix("_MNT")
+    df['new_library_name'] = df.library_name
+    df = df.apply(add_suffix_if, axis=1, args=("new_poseidon_IDs", "library_built", "ss", "_ss"))
+    df = df.apply(add_suffix_if, axis=1, args=("new_library_name", "library_built", "ss", "_ss"))
+    df['minotaur_library_ID'] = df.new_poseidon_IDs + '_' + df.new_library_name
+    return df
+
+
+## Argument parsing
 parser = argparse.ArgumentParser(
     prog="populate_janno",
     description="This script reads in different nf-core/eager result files and"
@@ -173,6 +200,13 @@ parser.add_argument(
     "--safe",
     action="store_true",
     help="Activate safe mode. The package's janno and ind files will not be updated, but instead new files will be created with the '.new' suffix. Only useful for testing.",
+)
+parser.add_argument(
+    "-s",
+    "--ssf_path",
+    metavar="<SSF>",
+    required=True,
+    help="The path to the SSF file of the recipe for the minotaur package.",
 )
 parser.add_argument("-v", "--version", action="version", version=VERSION)
 
@@ -215,6 +249,8 @@ tsv_table = pyEager.parsers.infer_merged_bam_names(
     tsv_table, run_trim_bam=True, skip_deduplication=False
 )
 
+ssf_table = pd.read_table(args.ssf_path, dtype=str)
+
 ## Read poseidon yaml, infer path to janno file and read janno file.
 poseidon_yaml_data = PoseidonYaml(args.poseidon_yml_path)
 janno_table = pd.read_table(poseidon_yaml_data.janno_file, dtype=str)
@@ -230,11 +266,94 @@ damage_table = damage_table[["Library_ID", "n_reads", "dmg_5p_1bp"]].rename(
 )
 
 ## Prepare endogenous table for joining. Should be max value in cases where multiple libraries are merged. But also, should be SG data ONLY, which is unlikely to work well with ENA datasets where TF and SG reads might be merged.
-## TODO-dev Decide on how to get keep only SG data. The SSF Could be used to filter.
-## NOTE: for now, endogenous DNA is ignored, as inference of SG/TF is difficult.
 endogenous_table = endogenous_table[["id", "endogenous_dna"]].rename(
     columns={"id": "Library_ID", "endogenous_dna": "endogenous"}
 )
+## Get df with minotaur_library_ids that are WGS. Used to decide on which libraries to keep the endogenous results for.
+##  the strandedness of the library is also used to infer the minotaur_library_id.
+library_strategy_table = ssf_table[
+    ["poseidon_IDs", "library_name", "library_strategy", "library_built"]
+].drop_duplicates()
+library_strategy_table = library_strategy_table[
+    library_strategy_table.library_strategy == "WGS"
+]
+library_strategy_table["poseidon_IDs"] = library_strategy_table.poseidon_IDs.apply(
+    lambda x: x.split(";")
+)
+library_strategy_table = library_strategy_table.explode("poseidon_IDs")
+library_strategy_table = infer_minotaur_library_id(library_strategy_table).apply(
+    add_suffix_if,
+    axis=1,
+    args=("poseidon_IDs","library_built","ss")
+)
+library_strategy_table = library_strategy_table[
+    ["minotaur_library_ID", "library_strategy"]
+]
+
+## Merge the two tables, only keeping endogenous values for WGS libraries.
+endogenous_table = endogenous_table.merge(
+    library_strategy_table,
+    left_on="Library_ID",
+    right_on="minotaur_library_ID",
+    how="right",
+).drop(columns=["minotaur_library_ID", "library_strategy"])
+
+## Prepare table with Library_Built column. Infer from the SSF table.
+library_built_table = ssf_table[
+    ["poseidon_IDs", "library_built", "library_strategy"]
+].drop_duplicates()
+library_built_table["poseidon_IDs"] = library_built_table.poseidon_IDs.apply(
+    lambda x: x.split(";")
+)
+library_built_table = library_built_table.explode("poseidon_IDs")
+library_built_table["poseidon_IDs"] = library_built_table.poseidon_IDs.str.removesuffix(
+    "_MNT"
+)
+library_built_table = library_built_table.apply(
+    add_suffix_if,
+    axis=1,
+    args=("poseidon_IDs", "library_built", "ss", "_ss"),
+)
+
+library_built_table["library_strategy"] = library_built_table.apply(
+    library_strategy_to_capture_type,
+    args=('library_strategy', poseidon_yaml_data.genotype_data.snp_set),
+    axis=1,
+)
+
+## Prepare Genetic_Source Accession IDs. Infer from SSF table.
+def unique_values_join(x, sep=";"):
+    return sep.join(x.unique())
+
+
+accession_table = ssf_table[
+    ["poseidon_IDs", "study_accession", "run_accession", "secondary_sample_accession", "library_built"]
+].drop_duplicates()
+accession_table["poseidon_IDs"] = accession_table.poseidon_IDs.apply(
+    lambda x: x.split(";")
+)
+accession_table = accession_table.explode("poseidon_IDs")
+accession_table["poseidon_IDs"] = accession_table.poseidon_IDs.str.removesuffix("_MNT")
+accession_table = accession_table.apply(add_suffix_if, axis=1, args=("poseidon_IDs", "library_built", "ss", "_ss"))
+accession_table = accession_table.groupby("poseidon_IDs").agg(
+    {
+        "study_accession": unique_values_join,
+        "run_accession": unique_values_join,
+        "secondary_sample_accession": unique_values_join,
+    }
+)
+column_order = ["study_accession", "secondary_sample_accession", "run_accession"]
+accession_table["Genetic_Source_Accession_IDs"] = accession_table.apply(
+    lambda row: ";".join(row[column_order]), axis=1
+)
+accession_table = accession_table.drop(
+    [
+        "study_accession",
+        "secondary_sample_accession",
+        "run_accession",
+    ],
+    axis=1,
+).reset_index()
 
 ## Prepare SNP coverage table for joining. Should always be on the sample level, so only need to fix column names.
 snp_coverage_table = snp_coverage_table.drop("Total_Snps", axis=1).rename(
@@ -264,7 +383,7 @@ sex_determination_table = sex_determination_table[
     ["id", "RateX", "RateY", "RateErrX", "RateErrY"]
 ]
 
-## Merge all eager tables together (exclude endogenous for now).
+## Merge all eager tables together (plus SSF table summarised attribute: Genetic_Source_Accession_IDs)
 compound_eager_table = (
     pd.DataFrame.merge(
         tsv_table,
@@ -286,10 +405,24 @@ compound_eager_table = (
         validate="many_to_one",
     )
     .merge(
+        ## Add endogenous DNA results per Library_ID
+        endogenous_table,
+        on="Library_ID",
+        validate="many_to_one",
+        how="left",
+    )
+    .merge(
         ## Add sex determination results per Sample_ID
         sex_determination_table,
         left_on="sexdet_bam_name",
         right_on="id",
+        validate="many_to_one",
+    )
+    .merge(
+        ## Add Genetic_Source_Accession_IDs summarised column
+        accession_table,
+        left_on="Sample_Name",
+        right_on="poseidon_IDs",
         validate="many_to_one",
     )
     .drop(
@@ -300,7 +433,6 @@ compound_eager_table = (
             "SeqType",
             "Organism",
             "Strandedness",
-            "UDG_Treatment",
             "R1",
             "R2",
             "BAM",
@@ -312,6 +444,7 @@ compound_eager_table = (
             "sexdet_bam_name",
             "Sample_ID",
             "id",
+            "poseidon_IDs",
         ],
         axis=1,
     )
@@ -320,6 +453,7 @@ compound_eager_table = (
 
 summarised_stats = pd.DataFrame()
 summarised_stats["Sample_Name"] = compound_eager_table["Sample_Name"].unique()
+## Contamination_Note: Add note about contamination estimation in libraries with more SNPs than the cutoff.
 summarised_stats = (
     compound_eager_table.astype("string")
     .groupby("Sample_Name")[["Contamination_Nr_SNPs"]]
@@ -343,6 +477,7 @@ summarised_stats = (
     .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
 )
 
+## Nr_Libraries: Count number of libraries per sample
 summarised_stats = (
     compound_eager_table.groupby("Sample_Name")[["Library_ID"]]
     .agg("nunique")
@@ -350,6 +485,31 @@ summarised_stats = (
     .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
 )
 
+## UDG: Add UDG info by aggregating info to poseidon_ID level.
+## If more than one unique state exists in a group, return `mixed`
+agg_func = lambda group: group.iloc[0] if group.nunique() == 1 else "mixed"
+summarised_stats = (
+    compound_eager_table.groupby("Sample_Name")[["UDG_Treatment"]]
+    .agg({"UDG_Treatment": agg_func})
+    .apply(udg_treatment_to_udg, axis=1)
+    .rename(columns={"UDG_Treatment": "UDG"})
+    .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
+)
+
+## Library_Built & CaptureType (inference is not great though)
+summarised_stats = (
+    library_built_table.groupby("poseidon_IDs")[["library_built", "library_strategy"]]
+    .agg({"library_built": agg_func, "library_strategy": lambda x: ";".join(x)})
+    .merge(
+        summarised_stats,
+        right_on="Sample_Name",
+        left_on="poseidon_IDs",
+        validate="one_to_one",
+    )
+    .rename(columns={"library_built": "Library_Built", "library_strategy": "Capture_Type"})
+)
+
+## Contamination_Est: Calculated weighted mean across libraries of a sample.
 summarised_stats = (
     compound_eager_table.groupby("Sample_Name")[
         ["Contamination_Nr_SNPs", "Contamination_Est", "Contamination_SE", "n_reads"]
@@ -366,6 +526,7 @@ summarised_stats = (
     .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
 )
 
+## Contamination_SE: Calculated weighted mean across libraries of a sample.
 summarised_stats = (
     compound_eager_table.groupby("Sample_Name")[
         ["Contamination_Nr_SNPs", "Contamination_Est", "Contamination_SE", "n_reads"]
@@ -382,11 +543,12 @@ summarised_stats = (
     .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
 )
 
-## If Contamination column is not empty, add the contamination measure
+## Contamination_Meas: If Contamination column is not empty, add the contamination measure
 summarised_stats["Contamination_Meas"] = summarised_stats.apply(
     set_contamination_measure, axis=1
 )
 
+## Damage: Calculated weighted mean across libraries of a sample.
 summarised_stats = (
     compound_eager_table.groupby("Sample_Name")[["damage", "n_reads"]]
     .apply(
@@ -401,6 +563,17 @@ summarised_stats = (
     .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
 )
 
+## Endogenous: The maximum value of endogenous DNA across WGS libraries of a sample.
+summarised_stats = (
+    compound_eager_table.groupby("Sample_Name")["endogenous"]
+    .apply(
+        max,
+    )
+    .reset_index("Sample_Name")
+    .rename(columns={"endogenous": "Endogenous"})
+    .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
+)
+
 final_eager_table = compound_eager_table.merge(
     summarised_stats, on="Sample_Name", validate="many_to_one"
 ).drop(
@@ -411,6 +584,8 @@ final_eager_table = compound_eager_table.merge(
         "Contamination_SE",
         "n_reads",
         "damage",
+        "endogenous",
+        "UDG_Treatment",
         "Original_library_names",
     ],
 )
@@ -418,6 +593,7 @@ final_eager_table = compound_eager_table.merge(
 filled_janno_table = janno_table.merge(
     final_eager_table, left_on="Eager_ID", right_on="Sample_Name"
 )
+## Replace columns in original janno with values in final_eager_table
 ## TODO-dev need to infer Genetic_Sex from 'RateX', 'RateY', 'RateErrX', 'RateErrY'
 for col in [
     "Nr_SNPs",
@@ -428,6 +604,11 @@ for col in [
     "Contamination_Note",
     "Library_Names",
     "Contamination_Meas",
+    "Endogenous",
+    "Library_Built",
+    "Capture_Type",
+    "UDG",
+    "Genetic_Source_Accession_IDs",
 ]:
     filled_janno_table[col] = (
         filled_janno_table[[col + "_x", col + "_y"]].bfill(axis=1).iloc[:, 0]
@@ -440,6 +621,12 @@ filled_janno_table = filled_janno_table.drop(
 
 ## Replace NAs with "n/a"
 filled_janno_table.replace(np.nan, "n/a", inplace=True)
+
+## Hard-coded values
+filled_janno_table["Data_Preparation_Pipeline_URL"] = (
+    f"https://github.com/nf-core/eager/releases/tag/{EAGER_VERSION}"
+)
+filled_janno_table["Genotype_Ploidy"] = "haploid"
 
 final_column_order = [
     "Poseidon_ID",

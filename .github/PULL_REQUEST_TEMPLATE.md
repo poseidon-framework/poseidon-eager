@@ -12,7 +12,6 @@ When a new release is made for minotaur, the following steps should be taken:
     - [ ] Update the eager version in `scripts/populate_janno.py`
 - Update the version number in the following files:
   - [ ] scripts/download_and_localise_package_files.sh
-  - [ ] scripts/ssf_validator.py
   - [ ] scripts/create_eager_input.sh
   - [ ] scripts/minotaur_packager.sh
   - [ ] scripts/validate_downloaded_data.sh

@@ -310,7 +310,7 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
   check_fail $? "[${package_name}]: Failed to initialise package. Aborting."
 
   ## Fill in janno
-  errecho -y "Populating janno file"
+  errecho -y "[${package_name}]: Populating janno file"
   ${repo_dir}/scripts/populate_janno.py -r ${package_minotaur_directory}/results/ -t ${finalisedtsv_fn} -p ${tmp_dir}/package/POSEIDON.yml -s ${minotaur_recipe_dir}/${package_name}.ssf
 
   ## TODO-dev Infer genetic sex from janno and mirror to ind file.

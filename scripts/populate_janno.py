@@ -133,15 +133,16 @@ def library_strategy_to_capture_type(strategy):
 
 def udg_treatment_to_udg(df):
     if df['UDG_Treatment'] == "none":
-        return "minus"
+        df['UDG_Treatment'] = "minus"
     elif df['UDG_Treatment'] == "half":
-        return "half"
+        df['UDG_Treatment'] = "half"
     elif df['UDG_Treatment'] == "full":
-        return "plus"
+        df['UDG_Treatment'] = "plus"
     elif df['UDG_Treatment'] == "mixed":
-        return "mixed"
+        df['UDG_Treatment'] = "mixed"
     else:
-        return "n/a"
+        df['UDG_Treatment'] = "n/a"
+    return df
 
 parser = argparse.ArgumentParser(
     prog="populate_janno",

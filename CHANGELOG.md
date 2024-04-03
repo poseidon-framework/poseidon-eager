@@ -3,6 +3,27 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.3.0dev - 03/04/2024
+
+### `Added`
+
+- Removed various scripts that have moved to the minotaur-recipes repo.
+- `scripts/download_ena_data.py` can now download PE data
+- `scripts/minotaur_packager.sh`: 
+  - Add option to force package recreation (but not publishing)
+  - Add SSF to packages, and versions in README instead of txt file.
+- `scripts/populate_janno.py`:
+   - Add endogenous, captureType, udg, library_built, accessions, pipeline URL, and Genotype ploidy.
+- `scripts/run_eager.sh` & `scripts/download_and_localise_package_files.sh`: Swap to variable for local paths to minotaur resources (more portable).
+- Deactivated GA for validation that now moved to other repo. 
+- Updated PR template
+
+### `Fixed`
+
+### `Dependencies`
+
+### `Deprecated`
+
 ## v0.2.1dev - 02/11/2023
 
 ### `Added`

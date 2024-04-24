@@ -17,6 +17,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `scripts/run_eager.sh` & `scripts/download_and_localise_package_files.sh`: Swap to variable for local paths to minotaur resources (more portable).
 - Deactivated GA for validation that now moved to other repo. 
 - Updated PR template
+- Configs now use tagged release for referencing cofs/assets
 
 ### `Fixed`
 

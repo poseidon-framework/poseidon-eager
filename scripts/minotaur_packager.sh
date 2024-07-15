@@ -426,16 +426,14 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
     sort_and_bake_poseidon_package ${tmp_dir}/package ${output_package_dir}
     check_fail $? "[${package_name}]: Failed to sort package dough. Aborting."
 
-    ## Move package contents to the oven
-    # errecho -y "[${package_name}]  Moving '${package_name}' dough to package oven"
-    # mv ${tmp_dir}/package/ ${output_package_dir}
-
     ## Then remove remaining temp files
     errecho -y "[${package_name}] Removing temp directory"
 
     ## Paranoid of removing in root, so extra check for tmp_dir
     if [[ ! -z ${tmp_dir} ]]; then
       ## Playing it safe by avoiding rm -r
+      rm ${tmp_dir}/package/*
+      rmdir ${tmp_dir}/package
       rm ${tmp_dir}/*
       rmdir ${tmp_dir}
     fi

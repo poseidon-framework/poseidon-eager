@@ -365,8 +365,9 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
   trident init -p ${tmp_dir}/${package_name}.geno -o ${tmp_dir}/package/ -n ${package_name} --snpSet ${snp_set}
   check_fail $? "[${package_name}]: Failed to initialise package. Aborting."
 
-  ## Add self as contributor to poseidon package
+  ## Add Thiseas as contributor to poseidon package
   ##  Trident 1.5.* does not include Josiah Carberry anymore, which breaks pyJanno if the field is empty.
+  errecho -y "[${package_name}]: Adding Thiseas as contributor to package."
   trident rectify --packageVersion Patch \
     -d ${tmp_dir}/package \
     --newContributors '[Thiseas C. Lamnidis](thiseas_christos_lamnidis@eva.mpg.de)' \

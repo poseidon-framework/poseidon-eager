@@ -12,7 +12,7 @@ dependencies:
   - bwidget=1.9.14=ha770c72_1
   - bzip2=1.0.8=h7f98852_4
   - c-ares=1.18.1=h7f98852_0
-  - ca-certificates=2024.2.2=hbcca054_0
+  - ca-certificates=2024.7.4=hbcca054_0
   - cairo=1.16.0=ha61ee94_1014
   - coreutils=8.25=1
   - curl=7.86.0=h2283fc2_1
@@ -80,12 +80,12 @@ dependencies:
   - ncurses=6.3=h27087fc_1
   - nextflow=21.04.0=h4a94de4_0
   - openjdk=11.0.15=hea3dc9f_3
-  - openssl=3.2.1=hd590300_1
+  - openssl=3.3.1=h4ab18f5_1
   - pango=1.50.12=h382ae3d_0
   - pcre2=10.40=hc3806b6_0
   - pip=23.1.1=pyhd8ed1ab_0
   - pixman=0.40.0=h36c2ea0_0
-  - poseidon-trident=1.4.1.0=hf48d1a7_0
+  - poseidon-trident=1.5.4.0=hf48d1a7_0
   - pthread-stubs=0.4=h36c2ea0_1001
   - python=3.9.16=h2782a2a_0_cpython
   - r-assertthat=0.2.1=r41hc72bb7e_3
@@ -181,7 +181,7 @@ dependencies:
       - patsy==0.5.3
       - pillow==10.0.0
       - pydamage==0.70
-      - pyeager==0.1.4.1
+      - pyeager==0.1.4.2
       - pyparsing==3.0.9
       - pysam==0.21.0
       - python-dateutil==2.8.2
@@ -194,3 +194,4 @@ dependencies:
       - tzdata==2023.3
       - wget==3.2
       - zipp==3.16.2
+prefix: /home/thiseas_christos_lamnidis/anaconda3/envs/poseidon-eager

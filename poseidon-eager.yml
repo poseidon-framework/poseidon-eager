@@ -194,4 +194,4 @@ dependencies:
       - tzdata==2023.3
       - wget==3.2
       - zipp==3.16.2
-prefix: /home/thiseas_christos_lamnidis/anaconda3/envs/poseidon-eager
+## qjanno is also installed centrally. Not yet on bioconda.

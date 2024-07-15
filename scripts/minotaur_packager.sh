@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-VERSION='0.3.0dev'
+VERSION='0.4.0dev'
 set -o pipefail ## Pipefail, complain on new unassigned variables.
 # set -x ## Debugging
 

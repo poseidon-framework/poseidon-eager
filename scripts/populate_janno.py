@@ -10,7 +10,7 @@ import re
 import numpy as np
 from collections import namedtuple
 
-VERSION = "0.3.2dev"
+VERSION = "0.3.3dev"
 EAGER_VERSION = "2.4.6"
 
 
@@ -588,7 +588,8 @@ final_eager_table = compound_eager_table.merge(
         "UDG_Treatment",
         "Original_library_names",
     ],
-)
+).drop_duplicates()
+## Dropping duplicates here is necessary when Nr_Libraries is >1, as the same Sample_Name will be repeated for each library.
 
 filled_janno_table = janno_table.merge(
     final_eager_table, left_on="Eager_ID", right_on="Sample_Name"

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-VERSION='0.4.0dev'
+VERSION='0.4.1dev'
 set -o pipefail ## Pipefail, complain on new unassigned variables.
 # set -x ## Debugging
 
@@ -9,6 +9,7 @@ function Helptext() {
   echo -ne "This script collects the genotype data and metadata from Minotaur-processing and creates/updates the requested poseidon package if needed.\n\n"
   echo -ne "Options:\n"
   echo -ne "-d, --debug\t\tActivates debug mode, and keeps temporary directories for troubleshooting.\n"
+  echo -ne "-i, --interactive\t\tEnter python intractive mode after execution of populate_janno.py.\n"
   echo -ne "-h, --help\t\tPrint this text and exit.\n"
   echo -ne "-v, --version\t\tPrint version and exit.\n"
 }
@@ -271,7 +272,7 @@ function sort_and_bake_poseidon_package() {
 }
 
 ## Parse CLI args.
-TEMP=`getopt -q -o dhfv --long debug,help,force,version -n "${0}" -- "$@"`
+TEMP=`getopt -q -o dihfv --long debug,interactive,help,force,version -n "${0}" -- "$@"`
 eval set -- "${TEMP}"
 
 ## Parameter defaults
@@ -285,6 +286,7 @@ eval set -- "${TEMP}"
 package_minotaur_directory=''
 force_recreate="FALSE"
 debug_mode=0
+interactive_mode=0
 
 ## Print helptext and exit when no option is provided.
 if [[ "${#@}" == "1" ]]; then
@@ -299,6 +301,7 @@ while true ; do
     -v|--version)       echo ${VERSION}; exit 0;;
     -f|--force)         force_recreate="TRUE"; errecho -r "[minotaur_packager.sh]: Forcing package recreation."; shift ;;
     -d|--debug)         errecho -y "[minotaur_packager.sh]: Debug mode activated."; debug_mode=1; shift ;;
+    -i|--interactive)   errecho -y "[minotaur_packager.sh]: Interactive mode activated."; interactive_mode=1; shift ;;
     --)                 package_minotaur_directory="${2%/}"; break ;;
     *)                  echo -e "invalid option provided.\n"; Helptext; exit 1;;
   esac
@@ -376,7 +379,12 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
 
   ## Fill in janno
   errecho -y "[${package_name}]: Populating janno file"
-  ${repo_dir}/scripts/populate_janno.py -r ${package_minotaur_directory}/results/ -t ${finalisedtsv_fn} -p ${tmp_dir}/package/POSEIDON.yml -s ${minotaur_recipe_dir}/${package_name}.ssf
+  if [[ ${interactive_mode} -eq 1 ]]; then
+    call_python="python3 -i"
+  else
+    call_python="python3"
+  fi
+  ${call_python} ${repo_dir}/scripts/populate_janno.py -r ${package_minotaur_directory}/results/ -t ${finalisedtsv_fn} -p ${tmp_dir}/package/POSEIDON.yml -s ${minotaur_recipe_dir}/${package_name}.ssf
   check_fail $? "[${package_name}]: Failed to populate janno. Aborting."
 
   ## TODO-dev Infer genetic sex from janno and mirror to ind file.

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-VERSION='0.4.1dev'
+VERSION='0.4.2dev'
 set -o pipefail ## Pipefail, complain on new unassigned variables.
 # set -x ## Debugging
 
@@ -10,6 +10,7 @@ function Helptext() {
   echo -ne "Options:\n"
   echo -ne "-d, --debug\t\tActivates debug mode, and keeps temporary directories for troubleshooting.\n"
   echo -ne "-i, --interactive\t\tEnter python intractive mode after execution of populate_janno.py.\n"
+  echo -ne "-f, --force\t\tForce package recreation, even if the genotypes are not newer than the package.\n"
   echo -ne "-h, --help\t\tPrint this text and exit.\n"
   echo -ne "-v, --version\t\tPrint version and exit.\n"
 }
@@ -245,13 +246,13 @@ function sort_and_bake_poseidon_package() {
 
   ## Use qjanno to create the desired sorted order of Poseidon_IDs
   errecho -y "[${package_name}]: Creating desired order file."
-  qjanno "SELECT '<'||Poseidon_ID||'>' FROM d(${origin_pkg_dir}) ORDER BY Poseidon_ID" --raw --noOutHeader > desiredOrder.txt
+  qjanno "SELECT '<'||Poseidon_ID||'>' FROM d(${origin_pkg_dir}) ORDER BY Poseidon_ID" --raw --noOutHeader > ${tmp_dir}/desiredOrder.txt
   check_fail $? "[${package_name}]: Failed to create desired order file. Aborting."
 
   ## Sort the package dough and put resulting package in the output directory
   errecho -y "[${package_name}]: Sorting package dough and moving to package oven"
   trident forge -d ${origin_pkg_dir} \
-    --forgeFile desiredOrder.txt \
+    --forgeFile ${tmp_dir}/desiredOrder.txt \
     -o ${output_pkg_dir} \
     --ordered \
     --preservePyml

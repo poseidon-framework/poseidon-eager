@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-HELPER_FUNCTION_VERSION='0.2.2dev'
+HELPER_FUNCTION_VERSION='0.2.3dev'
 
 ## Print coloured messages to stderr
 #   errecho -r will print in red
@@ -150,46 +150,6 @@ function all_x_in_y() {
   echo "${exclusive_entries[@]}"
 }
 
-## Function to return udg treatment based on janno entry
-# usage: infer_library_udg 'half;minus;plus' 0
-# The second argument (index) is 0-based
-function infer_library_udg() {
-  local value
-  local index
-  local result
-
-  value=($(echo ${1} | cut --output-delimiter ' ' -d ';' -f 1- ))
-  let index=${2}
-
-  if [[ ${#value[@]} == '1' ]]; then
-      if [[ ${value[0]} == 'mixed' ]]; then
-        ## Mixed cannot deconstructed. Assume UDG none as that is most conservative.
-        result='none'
-      elif [[ ${value} == 'minus' ]]; then
-        result='none'
-      elif [[ ${value} == 'half' ]]; then
-        result='half'
-      elif [[ ${value} == 'plus' ]]; then
-        result='full'
-      else
-        errecho "Unrecognised UDG_Treatment value: '${value}' in entry '${1}'"
-        # exit 1
-      fi
-  else
-      if [[ ${value[${index}]} == 'minus' ]]; then
-        result='none'
-      elif [[ ${value[${index}]} == 'half' ]]; then
-        result='half'
-      elif [[ ${value[${index}]} == 'plus' ]]; then
-        result='full'
-      else
-        errecho "Unrecognised UDG_Treatment value: '${value[${index}]}' in entry '${1}'"
-        # exit 1
-      fi
-  fi
-  echo ${result}
-}
-
 ## Function to return library strandedness based on janno entry
 # usage: infer_library_udg 'ds;ds;ss' 0
 # The second argument (index) is 0-based
@@ -224,74 +184,6 @@ function infer_library_strandedness() {
       fi
   fi
   echo ${result}
-}
-
-## Function to create R1 and R2 columns from ena_table fastq_fn entries
-#   usage: r1_r2_from_ena_fastq <fastq_ftp>
-#   Returns: a thrupple of: seq_type R1 R2
-function r1_r2_from_ena_fastq() {
-  local value
-  local r1
-  local r2
-  local seq_type
-  local n_entries
-
-  value="${1}"
-
-  ## BAMs containing collapsed PE reads will have 3 entries in the ENA (merged, R1 unmerged, R2 unmerged), but we only need the first (merged reads).
-  n_entries=$(number_of_entries ';' ${value})
-
-  r1=$(basename "$(pull_by_index ';' ${value} 0)")
-  if [[ ${n_entries} -eq 2 ]]; then
-    ## If there are two entries, then it's PE
-    r2=$(basename "$(pull_by_index ';' ${value} 1)")
-    seq_type="PE"
-  elif [[ ${n_entries} -eq 1  || ${n_entries} -eq 3 ]]; then
-    ## If there is only one entry, then it's SE. With three, it is a BAM with collapsed reads, so keep only merged reads (treat as SE).
-    r2="NA"
-    seq_type="SE"
-  else
-    errecho -r "Unexpected number of entries in fastq_ftp field: ${value}."
-    exit 1
-  fi
-
-  echo "${seq_type} ${r1} ${r2}"
-}
-
-## Function to create R1 and R2 columns from ena_table fastq_fn entries
-#   usage: dummy_r1_r2_from_ena_fastq <path_prefix> <out_fn_prefix> <fastq_ftp> 
-#   Returns: a thrupple of: seq_type R1 R2
-function dummy_r1_r2_from_ena_fastq() {
-  local prefix
-  local out_fn_prefix
-  local value
-  local r1
-  local r2
-  local seq_type
-  local n_entries
-
-  prefix="${1}"
-  out_fn_prefix="${2}"
-  value="${3}"
-
-  ## BAMs containing collapsed PE reads will have 3 entries in the ENA (merged, R1 unmerged, R2 unmerged), but we only need the first (merged reads).
-  n_entries=$(number_of_entries ';' ${value})
-
-  r1="${prefix}/${out_fn_prefix}_R1.fastq.gz"
-  if [[ ${n_entries} -eq 2 ]]; then
-    ## If there are two entries, then it's PE
-    r2="${prefix}/${out_fn_prefix}_R2.fastq.gz"
-    seq_type="PE"
-  elif [[ ${n_entries} -eq 1 || ${n_entries} -eq 3 ]]; then
-    ## If there is only one entry, then it's SE. With three, it is a BAM with collapsed reads, so keep only merged reads (treat as SE).
-    r2="NA"
-    seq_type="SE"
-  else
-    errecho -r "Unexpected number of entries in fastq_ftp field: ${value}."
-    exit 1
-  fi
-
-  echo "${seq_type} ${r1} ${r2}"
 }
 
 ## Function to create R1 and R2 columns from ena_table fastq_fn entries
@@ -337,61 +229,170 @@ function symlink_names_from_ena_fastq() {
   echo "${seq_type} ${r1} ${r1_symlink} ${r2} ${r2_symlink}"
 }
 
-## Function to create R1 and R2 columns from ena_table fastq_fn entries
-#   usage: local_r1_r2_from_ena_fastq ${path_to_ena_data} ${fastq_fn}
-#   Returns: a thrupple of: seq_type R1 R2
-function local_r1_r2_from_ena_fastq() {
-  local data_path
-  local value
-  local r1
-  local r2
-  local seq_type
+# ## NOTE: The following commands will be removed soon. currently commented out for testing. they are used in minotaur-recipes only, and need not be here.
+# ## Function to create R1 and R2 columns from ena_table fastq_fn entries
+# #   usage: r1_r2_from_ena_fastq <fastq_ftp>
+# #   Returns: a thrupple of: seq_type R1 R2
+# function r1_r2_from_ena_fastq() {
+#   local value
+#   local r1
+#   local r2
+#   local seq_type
+#   local n_entries
 
-  data_path=$1
-  value=$2
-  r1="${data_path}/${value%%;*}"
-  r2="${data_path}/${value##*;}"
-  seq_type="PE"
+#   value="${1}"
 
-  if [[ "${r2}" == "${r1}" ]]; then
-    r2="NA"
-    seq_type="SE"
-  fi
+#   ## BAMs containing collapsed PE reads will have 3 entries in the ENA (merged, R1 unmerged, R2 unmerged), but we only need the first (merged reads).
+#   n_entries=$(number_of_entries ';' ${value})
 
-  echo "${seq_type} ${r1} ${r2}"
-}
+#   r1=$(basename "$(pull_by_index ';' ${value} 0)")
+#   if [[ ${n_entries} -eq 2 ]]; then
+#     ## If there are two entries, then it's PE
+#     r2=$(basename "$(pull_by_index ';' ${value} 1)")
+#     seq_type="PE"
+#   elif [[ ${n_entries} -eq 1  || ${n_entries} -eq 3 ]]; then
+#     ## If there is only one entry, then it's SE. With three, it is a BAM with collapsed reads, so keep only merged reads (treat as SE).
+#     r2="NA"
+#     seq_type="SE"
+#   else
+#     errecho -r "Unexpected number of entries in fastq_ftp field: ${value}."
+#     exit 1
+#   fi
 
-## Function to infer colour chemistry from an ENA-approved instrument model
-#   Usage: infer_colour_chemistry ${instrument_platform} ${instrument_model}
-#   Returns: The colour chemistry for the specified sequencer. Throw error and stop if the platform or sequencer are not identified.
-function infer_colour_chemistry() {
-  local platform
-  local model
-  local one_chem_seqs
-  local two_chem_seqs
-  local four_chem_seqs
-  local colour_chemistry
+#   echo "${seq_type} ${r1} ${r2}"
+# }
 
-  platform=${1}
-  model=${2}
-  ## Hard-coded list of sequencers per colour chemistry
-  one_chem_seqs=("Illumina iSeq 100") ## Not sure eager can process this, but good to have a record of it.
-  two_chem_seqs=("NextSeq 1000" "NextSeq 500" "NextSeq 550" "Illumina NovaSeq 6000" "Illumina MiniSeq")
-  four_chem_seqs=("Illumina HiSeq 1000" "Illumina HiSeq 1500" "Illumina HiSeq 2000" "Illumina HiSeq 2500" "Illumina HiSeq 3000" "Illumina HiSeq 4000" "Illumina HiSeq X" "HiSeq X Five" "HiSeq X Ten" "Illumina Genome Analyzer" "Illumina Genome Analyzer II" "Illumina Genome Analyzer IIx" "Illumina HiScanSQ" "Illumina MiSeq")
-  colour_chemistry=''
+# ## Function to create R1 and R2 columns from ena_table fastq_fn entries
+# #   usage: dummy_r1_r2_from_ena_fastq <path_prefix> <out_fn_prefix> <fastq_ftp> 
+# #   Returns: a thrupple of: seq_type R1 R2
+# function dummy_r1_r2_from_ena_fastq() {
+#   local prefix
+#   local out_fn_prefix
+#   local value
+#   local r1
+#   local r2
+#   local seq_type
+#   local n_entries
 
-  ## Throw an error if sequencer is not ILLUMINA
-  if [[ ${platform} != "ILLUMINA" ]]; then
-    check_fail 5 "Colour chemistry inference only works for ILLUMINA sequencing platforms, not '${platform}'."
-  else
-    if   [[ $(get_index_of "${model}" "${four_chem_seqs[@]}") != '' ]]; then
-      colour_chemistry="4"
-    elif [[ $(get_index_of "${model}" "${two_chem_seqs[@]}") != '' ]]; then
-      colour_chemistry="2"
-    else
-      check_fail 5 "Illumina model '${model}' not recognised. Please ensure your instrument model is in an ENA-approved format"
-    fi
-  fi
+#   prefix="${1}"
+#   out_fn_prefix="${2}"
+#   value="${3}"
 
-  echo ${colour_chemistry}
-}
+#   ## BAMs containing collapsed PE reads will have 3 entries in the ENA (merged, R1 unmerged, R2 unmerged), but we only need the first (merged reads).
+#   n_entries=$(number_of_entries ';' ${value})
+
+#   r1="${prefix}/${out_fn_prefix}_R1.fastq.gz"
+#   if [[ ${n_entries} -eq 2 ]]; then
+#     ## If there are two entries, then it's PE
+#     r2="${prefix}/${out_fn_prefix}_R2.fastq.gz"
+#     seq_type="PE"
+#   elif [[ ${n_entries} -eq 1 || ${n_entries} -eq 3 ]]; then
+#     ## If there is only one entry, then it's SE. With three, it is a BAM with collapsed reads, so keep only merged reads (treat as SE).
+#     r2="NA"
+#     seq_type="SE"
+#   else
+#     errecho -r "Unexpected number of entries in fastq_ftp field: ${value}."
+#     exit 1
+#   fi
+
+#   echo "${seq_type} ${r1} ${r2}"
+# }
+
+# # Function to create R1 and R2 columns from ena_table fastq_fn entries
+# #   usage: local_r1_r2_from_ena_fastq ${path_to_ena_data} ${fastq_fn}
+# #   Returns: a thrupple of: seq_type R1 R2
+# function local_r1_r2_from_ena_fastq() {
+#   local data_path
+#   local value
+#   local r1
+#   local r2
+#   local seq_type
+
+#   data_path=$1
+#   value=$2
+#   r1="${data_path}/${value%%;*}"
+#   r2="${data_path}/${value##*;}"
+#   seq_type="PE"
+
+#   if [[ "${r2}" == "${r1}" ]]; then
+#     r2="NA"
+#     seq_type="SE"
+#   fi
+
+#   echo "${seq_type} ${r1} ${r2}"
+# }
+
+# ## Function to infer colour chemistry from an ENA-approved instrument model
+# #   Usage: infer_colour_chemistry ${instrument_platform} ${instrument_model}
+# #   Returns: The colour chemistry for the specified sequencer. Throw error and stop if the platform or sequencer are not identified.
+# function infer_colour_chemistry() {
+#   local platform
+#   local model
+#   local one_chem_seqs
+#   local two_chem_seqs
+#   local four_chem_seqs
+#   local colour_chemistry
+
+#   platform=${1}
+#   model=${2}
+#   ## Hard-coded list of sequencers per colour chemistry
+#   one_chem_seqs=("Illumina iSeq 100") ## Not sure eager can process this, but good to have a record of it.
+#   two_chem_seqs=("NextSeq 1000" "NextSeq 500" "NextSeq 550" "Illumina NovaSeq 6000" "Illumina MiniSeq")
+#   four_chem_seqs=("Illumina HiSeq 1000" "Illumina HiSeq 1500" "Illumina HiSeq 2000" "Illumina HiSeq 2500" "Illumina HiSeq 3000" "Illumina HiSeq 4000" "Illumina HiSeq X" "HiSeq X Five" "HiSeq X Ten" "Illumina Genome Analyzer" "Illumina Genome Analyzer II" "Illumina Genome Analyzer IIx" "Illumina HiScanSQ" "Illumina MiSeq")
+#   colour_chemistry=''
+
+#   ## Throw an error if sequencer is not ILLUMINA
+#   if [[ ${platform} != "ILLUMINA" ]]; then
+#     check_fail 5 "Colour chemistry inference only works for ILLUMINA sequencing platforms, not '${platform}'."
+#   else
+#     if   [[ $(get_index_of "${model}" "${four_chem_seqs[@]}") != '' ]]; then
+#       colour_chemistry="4"
+#     elif [[ $(get_index_of "${model}" "${two_chem_seqs[@]}") != '' ]]; then
+#       colour_chemistry="2"
+#     else
+#       check_fail 5 "Illumina model '${model}' not recognised. Please ensure your instrument model is in an ENA-approved format"
+#     fi
+#   fi
+
+#   echo ${colour_chemistry}
+# }
+
+# ## Function to return udg treatment based on janno entry
+# # usage: infer_library_udg 'half;minus;plus' 0
+# # The second argument (index) is 0-based
+# function infer_library_udg() {
+#   local value
+#   local index
+#   local result
+
+#   value=($(echo ${1} | cut --output-delimiter ' ' -d ';' -f 1- ))
+#   let index=${2}
+
+#   if [[ ${#value[@]} == '1' ]]; then
+#       if [[ ${value[0]} == 'mixed' ]]; then
+#         ## Mixed cannot deconstructed. Assume UDG none as that is most conservative.
+#         result='none'
+#       elif [[ ${value} == 'minus' ]]; then
+#         result='none'
+#       elif [[ ${value} == 'half' ]]; then
+#         result='half'
+#       elif [[ ${value} == 'plus' ]]; then
+#         result='full'
+#       else
+#         errecho "Unrecognised UDG_Treatment value: '${value}' in entry '${1}'"
+#         # exit 1
+#       fi
+#   else
+#       if [[ ${value[${index}]} == 'minus' ]]; then
+#         result='none'
+#       elif [[ ${value[${index}]} == 'half' ]]; then
+#         result='half'
+#       elif [[ ${value[${index}]} == 'plus' ]]; then
+#         result='full'
+#       else
+#         errecho "Unrecognised UDG_Treatment value: '${value[${index}]}' in entry '${1}'"
+#         # exit 1
+#       fi
+#   fi
+#   echo ${result}
+# }

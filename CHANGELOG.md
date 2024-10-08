@@ -3,6 +3,36 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.4.0dev - 08/10/2024
+
+### `Added`
+
+- Updated Minotaur.config to include an adapter list. This ensures PE ssDNA data is processed correctly.
+- Use mapdamage2 for damage calculation in eager. Now limiting damage calculation to 1M reads, instead of all.
+- `minotaur_packager.sh`:
+  - Minotaur packages are now sorted by ascending Poseidon_ID, to ensure stability across any reruns.
+  - All Minotaur packages contain Thiseas C. Lamnidis as a contributor (i.e. to whom users should direct questions regarding processing etc).
+  - Now includes `-i/--interactive` option to help debug janno fill-in errors.
+- `run_eager.sh`: Now using nf-core/eager 2.5.1.
+
+### `Fixed`
+
+- `populate_janno.py`: Small bugfix to remove duplicate sample names when multiple libraries of a sample exist.
+- `source_me.sh`: 
+  - Removed some obsolete functions
+  - `symlink_names_from_ena_fastq()` Can now deal with merged PE data, which produce 3 FastQs. Only merged reads will be kept for processing.
+
+### `Dependencies`
+
+- nf-core/eager=2.5.1
+- poseidon-trident=1.5.4.0
+- pyeager==0.1.4.3
+- argparse==1.4.0
+
+### `Deprecated`
+
+- Removed some more scripts that have moved to the minotaur-recipes repo.
+
 ## v0.3.0dev - 03/04/2024
 
 ### `Added`

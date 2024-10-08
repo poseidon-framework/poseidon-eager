@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-VERSION='0.3.0dev'
+VERSION='0.4.2dev'
 set -o pipefail ## Pipefail, complain on new unassigned variables.
 # set -x ## Debugging
 
@@ -9,6 +9,8 @@ function Helptext() {
   echo -ne "This script collects the genotype data and metadata from Minotaur-processing and creates/updates the requested poseidon package if needed.\n\n"
   echo -ne "Options:\n"
   echo -ne "-d, --debug\t\tActivates debug mode, and keeps temporary directories for troubleshooting.\n"
+  echo -ne "-i, --interactive\t\tEnter python intractive mode after execution of populate_janno.py.\n"
+  echo -ne "-f, --force\t\tForce package recreation, even if the genotypes are not newer than the package.\n"
   echo -ne "-h, --help\t\tPrint this text and exit.\n"
   echo -ne "-v, --version\t\tPrint version and exit.\n"
 }
@@ -221,8 +223,57 @@ function add_ssf_file() {
     }' ${ssf_file_path} > ${package_dir}/${ssf_name}
 }
 
+function sort_and_bake_poseidon_package() {
+  local origin_pkg_dir
+  local output_pkg_dir
+  local package_name
+
+  origin_pkg_dir=${1}
+  output_pkg_dir=${2}
+  package_name=${output_pkg_dir##*/}
+
+  ## Check that the origin package directory exists and contains a POSEIDON.yml.
+  if [[ ! -d ${origin_pkg_dir} ]]; then
+    errecho -r "[${package_name}]: Origin package directory '${origin_pkg_dir}' not found."
+    exit 1
+  elif [[ ! -f ${origin_pkg_dir}/POSEIDON.yml ]]; then
+    errecho -r "[${package_name}]: Origin package directory '${origin_pkg_dir}' does not contain a POSEIDON.yml file."
+    exit 1
+  fi
+
+  ## Create output directory if necessary
+  mkdir -p ${output_pkg_dir}
+
+  ## Use qjanno to create the desired sorted order of Poseidon_IDs
+  errecho -y "[${package_name}]: Creating desired order file."
+  qjanno "SELECT '<'||Poseidon_ID||'>' FROM d(${origin_pkg_dir}) ORDER BY Poseidon_ID" --raw --noOutHeader > ${tmp_dir}/desiredOrder.txt
+  check_fail $? "[${package_name}]: Failed to create desired order file. Aborting."
+
+  ## Sort the package dough and put resulting package in the output directory
+  errecho -y "[${package_name}]: Sorting package dough and moving to package oven"
+  trident forge -d ${origin_pkg_dir} \
+    --forgeFile ${tmp_dir}/desiredOrder.txt \
+    -o ${output_pkg_dir} \
+    --ordered \
+    --preservePyml
+  check_fail $? "[${package_name}]: Failed to sort package dough. Aborting."
+
+  ## Rectify the sorted package
+  errecho -y "[${package_name}]: Rectifying package"
+  trident rectify -d ${output_pkg_dir} \
+    --packageVersion Minor \
+    --logText "Rearrange Poseidon_IDs alphabetically." \
+    --checksumAll
+  check_fail $? "[${package_name}]: Failed to rectify package. Aborting."
+
+  ## Validate the sorted package
+  errecho -y "[${package_name}]: Validating package"
+  trident validate -d ${output_pkg_dir}
+  check_fail $? "[${package_name}]: Failed to validate sorted package. Aborting."
+}
+
 ## Parse CLI args.
-TEMP=`getopt -q -o dhfv --long debug,help,force,version -n "${0}" -- "$@"`
+TEMP=`getopt -q -o dihfv --long debug,interactive,help,force,version -n "${0}" -- "$@"`
 eval set -- "${TEMP}"
 
 ## Parameter defaults
@@ -236,6 +287,7 @@ eval set -- "${TEMP}"
 package_minotaur_directory=''
 force_recreate="FALSE"
 debug_mode=0
+interactive_mode=0
 
 ## Print helptext and exit when no option is provided.
 if [[ "${#@}" == "1" ]]; then
@@ -250,6 +302,7 @@ while true ; do
     -v|--version)       echo ${VERSION}; exit 0;;
     -f|--force)         force_recreate="TRUE"; errecho -r "[minotaur_packager.sh]: Forcing package recreation."; shift ;;
     -d|--debug)         errecho -y "[minotaur_packager.sh]: Debug mode activated."; debug_mode=1; shift ;;
+    -i|--interactive)   errecho -y "[minotaur_packager.sh]: Interactive mode activated."; interactive_mode=1; shift ;;
     --)                 package_minotaur_directory="${2%/}"; break ;;
     *)                  echo -e "invalid option provided.\n"; Helptext; exit 1;;
   esac
@@ -316,9 +369,24 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
   trident init -p ${tmp_dir}/${package_name}.geno -o ${tmp_dir}/package/ -n ${package_name} --snpSet ${snp_set}
   check_fail $? "[${package_name}]: Failed to initialise package. Aborting."
 
+  ## Add Thiseas as contributor to poseidon package
+  ##  Trident 1.5.* does not include Josiah Carberry anymore, which breaks pyJanno if the field is empty.
+  errecho -y "[${package_name}]: Adding Thiseas as contributor to package."
+  trident rectify --packageVersion Patch \
+    -d ${tmp_dir}/package \
+    --newContributors '[Thiseas C. Lamnidis](thiseas_christos_lamnidis@eva.mpg.de)' \
+    --logText "Added self as contributor to package."
+  check_fail $? "[${package_name}]: Failed to add contributor. Aborting."
+
   ## Fill in janno
   errecho -y "[${package_name}]: Populating janno file"
-  ${repo_dir}/scripts/populate_janno.py -r ${package_minotaur_directory}/results/ -t ${finalisedtsv_fn} -p ${tmp_dir}/package/POSEIDON.yml -s ${minotaur_recipe_dir}/${package_name}.ssf
+  if [[ ${interactive_mode} -eq 1 ]]; then
+    call_python="python3 -i"
+  else
+    call_python="python3"
+  fi
+  ${call_python} ${repo_dir}/scripts/populate_janno.py -r ${package_minotaur_directory}/results/ -t ${finalisedtsv_fn} -p ${tmp_dir}/package/POSEIDON.yml -s ${minotaur_recipe_dir}/${package_name}.ssf
+  check_fail $? "[${package_name}]: Failed to populate janno. Aborting."
 
   ## TODO-dev Infer genetic sex from janno and mirror to ind file.
 
@@ -336,6 +404,7 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
     -d ${tmp_dir}/package \
     --outFormat PLINK \
     --removeOld
+  check_fail $? "[${package_name}]: Failed to convert data to PLINK format. Aborting."
 
   ## Update the package yaml to account for the changes in the janno (update renamed to rectify)
   errecho -y "[${package_name}] Rectifying package"
@@ -343,11 +412,12 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
     --packageVersion Patch \
     --logText "Automatic update of janno file from Minotaur processing." \
     --checksumAll
-    ## TODO Add poseidon core team, or Minotaur as contributors?
+  check_fail $? "[${package_name}]: Failed to rectify package after janno update. Aborting."
 
   ## Validate the resulting package
   errecho -y "[${package_name}] Validating package"
   trident validate -d ${tmp_dir}/package
+  check_fail $? "[${package_name}]: Failed to validate package. Aborting."
 
     ## Only move package dir to "package oven" if validation passed
   if [[ $? == 0 ]] && [[ ${debug_mode} -ne 1 ]]; then
@@ -360,9 +430,11 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
       errecho -y "[${package_name}] Removing old package directory"
       rm -r ${output_package_dir}
     fi
-    ## Move package contents to the oven
-    errecho -y "[${package_name}]  Moving '${package_name}' dough to package oven"
-    mv ${tmp_dir}/package/ ${output_package_dir}
+
+    ## Create a sorted copy of the package in the oven
+    errecho -y "[${package_name}] Sorting package dough and moving to package oven"
+    sort_and_bake_poseidon_package ${tmp_dir}/package ${output_package_dir}
+    check_fail $? "[${package_name}]: Failed to sort package dough. Aborting."
 
     ## Then remove remaining temp files
     errecho -y "[${package_name}] Removing temp directory"
@@ -370,6 +442,8 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
     ## Paranoid of removing in root, so extra check for tmp_dir
     if [[ ! -z ${tmp_dir} ]]; then
       ## Playing it safe by avoiding rm -r
+      rm ${tmp_dir}/package/*
+      rmdir ${tmp_dir}/package
       rm ${tmp_dir}/*
       rmdir ${tmp_dir}
     fi

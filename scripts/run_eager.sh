@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-VERSION='0.2.2dev'
+VERSION='0.4.0dev'
 
 TEMP=`getopt -q -o hvadD --long help,version,test,array,dry_run,debug: -n 'run_eager.sh' -- "$@"`
 eval set -- "$TEMP"
@@ -53,7 +53,7 @@ fi
 ## Hard-coded params
 # repo_dir='/mnt/archgen/poseidon/poseidon-eager'
 nxf_path="/mnt/archgen/tools/nextflow/22.04.5.5708/" ## Use centarlly installed version
-eager_version='2.4.6'
+eager_version='2.5.1'
 root_eager_dir="${local_poseidon_eager}/eager/"
 root_package_dir="${local_minotaur_recipes}/packages/"
 nextflow_profiles="eva,archgen,big_data,eva_local_paths"

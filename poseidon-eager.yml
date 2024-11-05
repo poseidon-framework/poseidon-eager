@@ -181,7 +181,7 @@ dependencies:
       - patsy==0.5.3
       - pillow==10.0.0
       - pydamage==0.70
-      - pyeager==0.1.4.3
+      - pyeager==0.1.5.0
       - pyparsing==3.0.9
       - pysam==0.21.0
       - python-dateutil==2.8.2

@@ -3,6 +3,21 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.4.1dev - 05/11/2024
+
+### `Added`
+
+- `minotaur_packager.sh`:
+  - Can now pick up mapdamage results when generating minotaur packages.
+
+### `Fixed`
+
+### `Dependencies`
+
+- pyeager==0.1.5.0
+
+### `Deprecated`
+
 ## v0.4.0dev - 08/10/2024
 
 ### `Added`

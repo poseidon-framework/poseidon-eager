@@ -264,8 +264,9 @@ janno_table["Eager_ID"] = janno_table["Poseidon_ID"].str.replace(r"_MNT", "")
 janno_table["Main_ID"] = janno_table["Eager_ID"].str.replace(r"_ss", "")
 
 ## Prepare damage table for joining. Infer eager Library_ID from id column, by removing '_rmdup.bam' suffix
+## The "_rmdup" is removed separately to also apply to mapdamage results (which lack the .bam suffix)
 ## TODO-dev Check if this is the correct way to infer Library_ID from id column when the results are on the sample level.
-damage_table["Library_ID"] = damage_table["id"].str.replace(r"_rmdup.bam", "")
+damage_table["Library_ID"] = damage_table["id"].str.replace(r"_rmdup", "").str.replace(r".bam", "")
 damage_table = damage_table[["Library_ID", "n_reads", "dmg_5p_1bp"]].rename(
     columns={"dmg_5p_1bp": "damage"}
 )

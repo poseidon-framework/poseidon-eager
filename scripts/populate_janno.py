@@ -218,9 +218,9 @@ parser.add_argument("-v", "--version", action="version", version=VERSION)
 args = parser.parse_args()
 
 ## Collect paths for analyses with multiple jsons.
-damageprofiler_json_paths = glob.glob(
+damage_estimation_paths = glob.glob(
     os.path.join(args.eager_result_dir, "damageprofiler", "*", "*.json")
-)
+) + glob.glob(os.path.join(args.eager_result_dir, "mapdamage", "*"))
 endorspy_json_paths = glob.glob(
     os.path.join(args.eager_result_dir, "endorspy", "*.json")
 )
@@ -237,7 +237,7 @@ nuclear_contamination_json_path = os.path.join(
 )
 
 ## Read in all JSONs into pandas DataFrames.
-damage_table = pyEager.wrappers.compile_damage_table(damageprofiler_json_paths)
+damage_table = pyEager.wrappers.compile_damage_table(damage_estimation_paths)
 endogenous_table = pyEager.wrappers.compile_endogenous_table(endorspy_json_paths)
 snp_coverage_table = pyEager.wrappers.compile_snp_coverage_table(
     snp_coverage_json_paths

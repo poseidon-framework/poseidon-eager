@@ -10,7 +10,7 @@ import re
 import numpy as np
 from collections import namedtuple
 
-VERSION = "0.4.0dev"
+VERSION = "0.4.1dev"
 EAGER_VERSION = "2.5.1"
 
 

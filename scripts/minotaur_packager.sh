@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-VERSION='0.4.2dev'
+VERSION='0.4.3dev'
 set -o pipefail ## Pipefail, complain on new unassigned variables.
 # set -x ## Debugging
 
@@ -171,7 +171,7 @@ function add_versions_file() {
 }
 
 ## Function to add SSF file to minotaur package
-## usage add_ssf_file <ssf_file_path> <package_dir>
+## usage add_ssf_file <ssf_file_path> <package_dir> <package_name>
 function add_ssf_file() {
   local ssf_file_path
   local ssf_name
@@ -181,7 +181,7 @@ function add_ssf_file() {
   ssf_file_path=${1}
   ssf_name=${ssf_file_path##*/}
   package_dir=${2}
-  package_name=${package_dir##*/}
+  package_name=${3}
 
   ## Check that the SSF file exists.
   if [[ ! -f ${ssf_file_path} ]]; then
@@ -395,11 +395,11 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
   echo "readmeFile: README.md" >> ${tmp_dir}/package/POSEIDON.yml
 
   ## Add SSF file to package
-  add_ssf_file ${minotaur_recipe_dir}/${package_name}.ssf ${tmp_dir}/package
+  add_ssf_file ${minotaur_recipe_dir}/${package_name}.ssf ${tmp_dir}/package ${package_name}
   echo "sequencingSourceFile: ${package_name}.ssf" >> ${tmp_dir}/package/POSEIDON.yml
 
   ## Convert data to PLINK format
-  errecho -y "[${package_name}] Converting data to PLINK format"
+  errecho -y "[${package_name}]: Converting data to PLINK format"
   trident genoconvert \
     -d ${tmp_dir}/package \
     --outFormat PLINK \
@@ -407,7 +407,7 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
   check_fail $? "[${package_name}]: Failed to convert data to PLINK format. Aborting."
 
   ## Update the package yaml to account for the changes in the janno (update renamed to rectify)
-  errecho -y "[${package_name}] Rectifying package"
+  errecho -y "[${package_name}]: Rectifying package"
   trident rectify -d ${tmp_dir}/package \
     --packageVersion Patch \
     --logText "Automatic update of janno file from Minotaur processing." \
@@ -415,7 +415,7 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
   check_fail $? "[${package_name}]: Failed to rectify package after janno update. Aborting."
 
   ## Validate the resulting package
-  errecho -y "[${package_name}] Validating package"
+  errecho -y "[${package_name}]: Validating package"
   trident validate -d ${tmp_dir}/package
   check_fail $? "[${package_name}]: Failed to validate package. Aborting."
 
@@ -427,17 +427,17 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
 
     ## If the package directory already exists, remove it
     if [[ -d ${output_package_dir} ]]; then
-      errecho -y "[${package_name}] Removing old package directory"
+      errecho -y "[${package_name}]: Removing old package directory"
       rm -r ${output_package_dir}
     fi
 
     ## Create a sorted copy of the package in the oven
-    errecho -y "[${package_name}] Sorting package dough and moving to package oven"
+    errecho -y "[${package_name}]: Finalising dough for baking"
     sort_and_bake_poseidon_package ${tmp_dir}/package ${output_package_dir}
     check_fail $? "[${package_name}]: Failed to sort package dough. Aborting."
 
     ## Then remove remaining temp files
-    errecho -y "[${package_name}] Removing temp directory"
+    errecho -y "[${package_name}]: Removing temp directory"
 
     ## Paranoid of removing in root, so extra check for tmp_dir
     if [[ ! -z ${tmp_dir} ]]; then

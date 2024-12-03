@@ -11,7 +11,20 @@ import numpy as np
 from collections import namedtuple
 
 VERSION = "0.4.1dev"
-EAGER_VERSION = "2.5.1"
+
+
+def get_eager_version(eager_result_dir):
+    software_versions_csv_fn = os.path.join(
+        eager_result_dir, "pipeline_info", "software_versions.csv"
+    )
+    ## Check the file xists, and if so, read it in and return the version of nf-core/eager
+    if os.path.exists(software_versions_csv_fn):
+        with open(software_versions_csv_fn, "r") as f:
+            for line in f:
+                if line.strip().split()[0] == "nf-core/eager":
+                    return line.strip().split()[1].lstrip("v")
+    else:
+        return None
 
 
 def camel_to_snake(name):
@@ -644,7 +657,8 @@ filled_janno_table = filled_janno_table.drop(
 ## Replace NAs with "n/a"
 filled_janno_table.replace(np.nan, "n/a", inplace=True)
 
-## Hard-coded values
+## Infer the eager version from software_versions.csv in the nf-core/eager result directory.
+EAGER_VERSION = get_eager_version(args.eager_result_dir)
 filled_janno_table["Data_Preparation_Pipeline_URL"] = (
     f"https://github.com/nf-core/eager/releases/tag/{EAGER_VERSION}"
 )

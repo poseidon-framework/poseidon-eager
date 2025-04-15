@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `minotaur_packager.sh`:
   - Can now pick up mapdamage results when generating minotaur packages.
 - `download_ena_data.py` now downloads BAMs in `submitted_ftp` when `fastq_ftp` is empty.
+- `conf/minotaur.config` updated to run input BAM conversion back to FastQ for re-mapping.
 
 ### `Fixed`
 

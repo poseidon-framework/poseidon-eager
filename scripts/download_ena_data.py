@@ -7,7 +7,7 @@ import argparse
 import os
 import wget
 
-VERSION = "0.4.0dev"
+VERSION = "0.5.0dev"
 
 parser = argparse.ArgumentParser(
     prog="download_ena_data",
@@ -79,10 +79,18 @@ for root, dirs, files in os.walk(os.path.join(args.ssf_dir)):
                     line_count += 1
                     download_url = ena_entry["fastq_ftp"]
                     download_md5 = ena_entry["fastq_md5"]
-                    if download_url == "":
+                    if download_url == "" and ena_entry["submitted_ftp"] != "":
+                        run_accession = ena_entry["run_accession"]
+                        download_url = ena_entry["submitted_ftp"]
+                        download_md5 = ena_entry["submitted_md5"]
+                        print(
+                            f"[download_ena_data.py]: No 'fastq_ftp' entry found for {run_accession} @ line {line_count}. Downloading 'submitted_ftp' instead: {download_url}",
+                            file=sys.stderr,
+                        )
+                    elif download_url == "":
                         run_accession = ena_entry["run_accession"]
                         print(
-                            f"[download_ena_data.py]: No 'fastq_ftp' entry found for {run_accession} @ line {line_count}. Skipping",
+                            f"[download_ena_data.py]: No 'fastq_ftp' or 'submitted_ftp' entry found for {run_accession} @ line {line_count}. Skipping",
                             file=sys.stderr,
                         )
                         continue

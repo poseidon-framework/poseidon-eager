@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail ## Pipefail, complain on new unassigned variables.
-VERSION='0.4.0dev'
+VERSION='0.5.0'
 ## Load helper bash functions
 source $(dirname ${0})/source_me.sh
 

@@ -10,7 +10,7 @@ import re
 import numpy as np
 from collections import namedtuple
 
-VERSION = "0.5.0dev"
+VERSION = "0.5.0"
 
 
 def get_eager_version(eager_result_dir):

@@ -7,7 +7,7 @@ import argparse
 import os
 import wget
 
-VERSION = "0.5.0dev"
+VERSION = "0.5.0"
 
 parser = argparse.ArgumentParser(
     prog="download_ena_data",

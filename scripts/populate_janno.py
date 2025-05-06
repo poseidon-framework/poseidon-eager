@@ -10,8 +10,21 @@ import re
 import numpy as np
 from collections import namedtuple
 
-VERSION = "0.4.0dev"
-EAGER_VERSION = "2.5.1"
+VERSION = "0.5.0"
+
+
+def get_eager_version(eager_result_dir):
+    software_versions_csv_fn = os.path.join(
+        eager_result_dir, "pipeline_info", "software_versions.csv"
+    )
+    ## Check the file xists, and if so, read it in and return the version of nf-core/eager
+    if os.path.exists(software_versions_csv_fn):
+        with open(software_versions_csv_fn, "r") as f:
+            for line in f:
+                if line.strip().split()[0] == "nf-core/eager":
+                    return line.strip().split()[1].lstrip("v")
+    else:
+        return None
 
 
 def camel_to_snake(name):
@@ -135,16 +148,16 @@ def library_strategy_to_capture_type(df, strategy_col, snp_set):
 
 ## Function to convert UDG_Treatment to poseidon UDG
 def udg_treatment_to_udg(df):
-    if df['UDG_Treatment'] == "none":
-        df['UDG_Treatment'] = "minus"
-    elif df['UDG_Treatment'] == "half":
-        df['UDG_Treatment'] = "half"
-    elif df['UDG_Treatment'] == "full":
-        df['UDG_Treatment'] = "plus"
-    elif df['UDG_Treatment'] == "mixed":
-        df['UDG_Treatment'] = "mixed"
+    if df["UDG_Treatment"] == "none":
+        df["UDG_Treatment"] = "minus"
+    elif df["UDG_Treatment"] == "half":
+        df["UDG_Treatment"] = "half"
+    elif df["UDG_Treatment"] == "full":
+        df["UDG_Treatment"] = "plus"
+    elif df["UDG_Treatment"] == "mixed":
+        df["UDG_Treatment"] = "mixed"
     else:
-        df['UDG_Treatment'] = "n/a"
+        df["UDG_Treatment"] = "n/a"
     return df
 
 
@@ -154,14 +167,19 @@ def add_suffix_if(df, x, y, if_y, suffix="_ss"):
         df[x] = df[x] + suffix
     return df
 
+
 ## Function to convert poseidon_ID and Library_ID to minotaur_library_ID
 def infer_minotaur_library_id(df):
     ## remove _MNT suffix, then add _ss if the library_built column is ss.
-    df['new_poseidon_IDs'] = df.poseidon_IDs.str.removesuffix("_MNT")
-    df['new_library_name'] = df.library_name
-    df = df.apply(add_suffix_if, axis=1, args=("new_poseidon_IDs", "library_built", "ss", "_ss"))
-    df = df.apply(add_suffix_if, axis=1, args=("new_library_name", "library_built", "ss", "_ss"))
-    df['minotaur_library_ID'] = df.new_poseidon_IDs + '_' + df.new_library_name
+    df["new_poseidon_IDs"] = df.poseidon_IDs.str.removesuffix("_MNT")
+    df["new_library_name"] = df.library_name
+    df = df.apply(
+        add_suffix_if, axis=1, args=("new_poseidon_IDs", "library_built", "ss", "_ss")
+    )
+    df = df.apply(
+        add_suffix_if, axis=1, args=("new_library_name", "library_built", "ss", "_ss")
+    )
+    df["minotaur_library_ID"] = df.new_poseidon_IDs + "_" + df.new_library_name
     return df
 
 
@@ -213,9 +231,9 @@ parser.add_argument("-v", "--version", action="version", version=VERSION)
 args = parser.parse_args()
 
 ## Collect paths for analyses with multiple jsons.
-damageprofiler_json_paths = glob.glob(
+damage_estimation_paths = glob.glob(
     os.path.join(args.eager_result_dir, "damageprofiler", "*", "*.json")
-)
+) + glob.glob(os.path.join(args.eager_result_dir, "mapdamage", "*"))
 endorspy_json_paths = glob.glob(
     os.path.join(args.eager_result_dir, "endorspy", "*.json")
 )
@@ -232,7 +250,7 @@ nuclear_contamination_json_path = os.path.join(
 )
 
 ## Read in all JSONs into pandas DataFrames.
-damage_table = pyEager.wrappers.compile_damage_table(damageprofiler_json_paths)
+damage_table = pyEager.wrappers.compile_damage_table(damage_estimation_paths)
 endogenous_table = pyEager.wrappers.compile_endogenous_table(endorspy_json_paths)
 snp_coverage_table = pyEager.wrappers.compile_snp_coverage_table(
     snp_coverage_json_paths
@@ -259,8 +277,11 @@ janno_table["Eager_ID"] = janno_table["Poseidon_ID"].str.replace(r"_MNT", "")
 janno_table["Main_ID"] = janno_table["Eager_ID"].str.replace(r"_ss", "")
 
 ## Prepare damage table for joining. Infer eager Library_ID from id column, by removing '_rmdup.bam' suffix
+## The "_rmdup" is removed separately to also apply to mapdamage results (which lack the .bam suffix)
 ## TODO-dev Check if this is the correct way to infer Library_ID from id column when the results are on the sample level.
-damage_table["Library_ID"] = damage_table["id"].str.replace(r"_rmdup.bam", "")
+damage_table["Library_ID"] = (
+    damage_table["id"].str.replace(r"_rmdup", "").str.replace(r".bam", "")
+)
 damage_table = damage_table[["Library_ID", "n_reads", "dmg_5p_1bp"]].rename(
     columns={"dmg_5p_1bp": "damage"}
 )
@@ -282,9 +303,7 @@ library_strategy_table["poseidon_IDs"] = library_strategy_table.poseidon_IDs.app
 )
 library_strategy_table = library_strategy_table.explode("poseidon_IDs")
 library_strategy_table = infer_minotaur_library_id(library_strategy_table).apply(
-    add_suffix_if,
-    axis=1,
-    args=("poseidon_IDs","library_built","ss")
+    add_suffix_if, axis=1, args=("poseidon_IDs", "library_built", "ss")
 )
 library_strategy_table = library_strategy_table[
     ["minotaur_library_ID", "library_strategy"]
@@ -317,9 +336,10 @@ library_built_table = library_built_table.apply(
 
 library_built_table["library_strategy"] = library_built_table.apply(
     library_strategy_to_capture_type,
-    args=('library_strategy', poseidon_yaml_data.genotype_data.snp_set),
+    args=("library_strategy", poseidon_yaml_data.genotype_data.snp_set),
     axis=1,
 )
+
 
 ## Prepare Genetic_Source Accession IDs. Infer from SSF table.
 def unique_values_join(x, sep=";"):
@@ -327,14 +347,22 @@ def unique_values_join(x, sep=";"):
 
 
 accession_table = ssf_table[
-    ["poseidon_IDs", "study_accession", "run_accession", "secondary_sample_accession", "library_built"]
+    [
+        "poseidon_IDs",
+        "study_accession",
+        "run_accession",
+        "secondary_sample_accession",
+        "library_built",
+    ]
 ].drop_duplicates()
 accession_table["poseidon_IDs"] = accession_table.poseidon_IDs.apply(
     lambda x: x.split(";")
 )
 accession_table = accession_table.explode("poseidon_IDs")
 accession_table["poseidon_IDs"] = accession_table.poseidon_IDs.str.removesuffix("_MNT")
-accession_table = accession_table.apply(add_suffix_if, axis=1, args=("poseidon_IDs", "library_built", "ss", "_ss"))
+accession_table = accession_table.apply(
+    add_suffix_if, axis=1, args=("poseidon_IDs", "library_built", "ss", "_ss")
+)
 accession_table = accession_table.groupby("poseidon_IDs").agg(
     {
         "study_accession": unique_values_join,
@@ -506,7 +534,9 @@ summarised_stats = (
         left_on="poseidon_IDs",
         validate="one_to_one",
     )
-    .rename(columns={"library_built": "Library_Built", "library_strategy": "Capture_Type"})
+    .rename(
+        columns={"library_built": "Library_Built", "library_strategy": "Capture_Type"}
+    )
 )
 
 ## Contamination_Est: Calculated weighted mean across libraries of a sample.
@@ -574,21 +604,25 @@ summarised_stats = (
     .merge(summarised_stats, on="Sample_Name", validate="one_to_one")
 )
 
-final_eager_table = compound_eager_table.merge(
-    summarised_stats, on="Sample_Name", validate="many_to_one"
-).drop(
-    columns=[
-        "Library_ID",
-        "Contamination_Nr_SNPs",
-        "Contamination_Est",
-        "Contamination_SE",
-        "n_reads",
-        "damage",
-        "endogenous",
-        "UDG_Treatment",
-        "Original_library_names",
-    ],
-).drop_duplicates()
+final_eager_table = (
+    compound_eager_table.merge(
+        summarised_stats, on="Sample_Name", validate="many_to_one"
+    )
+    .drop(
+        columns=[
+            "Library_ID",
+            "Contamination_Nr_SNPs",
+            "Contamination_Est",
+            "Contamination_SE",
+            "n_reads",
+            "damage",
+            "endogenous",
+            "UDG_Treatment",
+            "Original_library_names",
+        ],
+    )
+    .drop_duplicates()
+)
 ## Dropping duplicates here is necessary when Nr_Libraries is >1, as the same Sample_Name will be repeated for each library.
 
 filled_janno_table = janno_table.merge(
@@ -623,7 +657,8 @@ filled_janno_table = filled_janno_table.drop(
 ## Replace NAs with "n/a"
 filled_janno_table.replace(np.nan, "n/a", inplace=True)
 
-## Hard-coded values
+## Infer the eager version from software_versions.csv in the nf-core/eager result directory.
+EAGER_VERSION = get_eager_version(args.eager_result_dir)
 filled_janno_table["Data_Preparation_Pipeline_URL"] = (
     f"https://github.com/nf-core/eager/releases/tag/{EAGER_VERSION}"
 )

@@ -11,6 +11,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Can now pick up mapdamage results when generating minotaur packages.
 - `download_ena_data.py` now downloads BAMs in `submitted_ftp` when `fastq_ftp` is empty.
 - `conf/minotaur.config` updated to run input BAM conversion back to FastQ for re-mapping.
+- `populate_janno.py`:
+  - Added `mapdamage` and `mapdamage2` to the list of damage calculation tools.
+  - nf-core/eager version is now inferred from the pipeline information, and no longer hard-coded.
 
 ### `Fixed`
 

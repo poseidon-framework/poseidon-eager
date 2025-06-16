@@ -3,6 +3,19 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.5.1 - 06/05/2025 (mapdamage added on 05/11/2024)
+
+### `Added`
+
+- `populate_janno.py`:
+  - Adjusted to use `sample_accession` when `secondary_sample_accession` is not `"n/a"`. This is important for data pulled from the GSA.
+
+### `Fixed`
+
+### `Dependencies`
+
+### `Deprecated`
+
 ## v0.5.0 - 06/05/2025 (mapdamage added on 05/11/2024)
 
 ### `Added`

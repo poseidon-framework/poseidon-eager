@@ -10,7 +10,7 @@ import re
 import numpy as np
 from collections import namedtuple
 
-VERSION = "0.5.0"
+VERSION = "0.5.1"
 
 
 def get_eager_version(eager_result_dir):
@@ -352,6 +352,7 @@ accession_table = ssf_table[
         "study_accession",
         "run_accession",
         "secondary_sample_accession",
+        "sample_accession",
         "library_built",
     ]
 ].drop_duplicates()
@@ -360,17 +361,28 @@ accession_table["poseidon_IDs"] = accession_table.poseidon_IDs.apply(
 )
 accession_table = accession_table.explode("poseidon_IDs")
 accession_table["poseidon_IDs"] = accession_table.poseidon_IDs.str.removesuffix("_MNT")
+## SOmehow this .apply changes the dtype of the secondary sample accession into a float
 accession_table = accession_table.apply(
     add_suffix_if, axis=1, args=("poseidon_IDs", "library_built", "ss", "_ss")
 )
+## Turn NaN into 'n/a' to keep everything a string.
+accession_table = accession_table.fillna("n/a")
+
 accession_table = accession_table.groupby("poseidon_IDs").agg(
     {
         "study_accession": unique_values_join,
         "run_accession": unique_values_join,
         "secondary_sample_accession": unique_values_join,
+        "sample_accession": unique_values_join,
     }
 )
-column_order = ["study_accession", "secondary_sample_accession", "run_accession"]
+
+## The secondary sample accession is preferred since it is the ENA one in ENA tables, but if it is 'n/a', then use the sample_accession.
+if "n/a" in accession_table.secondary_sample_accession.values:
+    column_order = ["study_accession", "sample_accession", "run_accession"]
+else:
+    column_order = ["study_accession", "secondary_sample_accession", "run_accession"]
+
 accession_table["Genetic_Source_Accession_IDs"] = accession_table.apply(
     lambda row: ";".join(row[column_order]), axis=1
 )
@@ -379,6 +391,7 @@ accession_table = accession_table.drop(
         "study_accession",
         "secondary_sample_accession",
         "run_accession",
+        "sample_accession",
     ],
     axis=1,
 ).reset_index()

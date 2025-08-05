@@ -16,6 +16,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### `Deprecated`
 
+- Removed `packages/` directory, which included an early version of what has become the minotaur-recipes repository.
+
 ## v0.5.0 - 06/05/2025 (mapdamage added on 05/11/2024)
 
 ### `Added`

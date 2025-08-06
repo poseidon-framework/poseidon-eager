@@ -3,6 +3,21 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## v0.5.2 - DD/MM/YYYY
+
+### `Added`
+
+### `Fixed`
+
+- `download_ena_data.py`:
+  - Fixed a bug where the md5sums of downloaded BAMs were formatted incorrectly in the expected_md5sum file.
+
+### `Dependencies`
+
+### `Deprecated`
+
+- Removed `packages/` directory, which included an early version of what has become the minotaur-recipes repository.
+
 ## v0.5.1 - 06/05/2025 (mapdamage added on 05/11/2024)
 
 ### `Added`

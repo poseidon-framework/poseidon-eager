@@ -7,7 +7,7 @@ import argparse
 import os
 import wget
 
-VERSION = "0.5.1"
+VERSION = "0.5.2"
 
 parser = argparse.ArgumentParser(
     prog="download_ena_data",
@@ -41,7 +41,7 @@ parser.add_argument("-v", "--version", action="version", version=VERSION)
 def read_ena_table(file_name):
     l = file_name.readlines()
     headers = l[0].split()
-    return map(lambda row: dict(zip(headers, row.split("\t"))), l[1:])
+    return map(lambda row: dict(zip(headers, row.strip().split("\t"))), l[1:])
 
 
 def read_versions_fn(file_name):

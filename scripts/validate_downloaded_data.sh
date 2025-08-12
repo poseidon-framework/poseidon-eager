@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 set -uo pipefail ## Pipefail, complain on new unassigned variables.
-VERSION='0.5.0'
+VERSION='0.5.1'
 ## Load helper bash functions
 source $(dirname ${0})/source_me.sh
 
@@ -31,7 +31,7 @@ download_dir=$(readlink -f ${2})
 package_eager_dir=$(readlink -f ${3})
 symlink_dir=${package_eager_dir}/data
 md5sum_file="${download_dir}/expected_md5sums.txt"
-newest_fastq=$(ls -Art -1 ${download_dir}/*q.gz | tail -n 1) ## Reverse order and tail to avoid broken pipe errors
+newest_file=$(ls -Art -1 ${download_dir}/*[!.txt]  | tail -n 1) ## Reverse order and tail to avoid broken pipe errors
 script_debug_string="[validate_downloaded_data.sh]:"
 
 ## Create output directory if it does not exist
@@ -40,7 +40,7 @@ mkdir -p ${symlink_dir}
 if [[ ! -f ${md5sum_file} ]]; then
   ## If no md5sum file, create md5sum 
   check_fail 1 "${script_debug_string} No md5sum file found. Missing: ${md5sum_file}"
-elif [[ ${newest_fastq} -nt ${md5sum_file} ]]; then
+elif [[ ${newest_file} -nt ${md5sum_file} ]]; then
   ## Should never trigger, but a good sanity check nonetheless
   check_fail 1 "${script_debug_string} Downloaded data is newer than ${md5sum_file}. Aborting"
 else
@@ -57,23 +57,26 @@ ssf_header=($(head -n1 ${ssf_file}))
 let pid_col=$(get_index_of 'poseidon_IDs' "${ssf_header[@]}")+1
 let lib_name_col=$(get_index_of 'library_name' "${ssf_header[@]}")+1
 let fastq_col=$(get_index_of 'fastq_ftp' "${ssf_header[@]}")+1
+let bam_col=$(get_index_of 'submitted_ftp' "${ssf_header[@]}")+1
 let lib_built_col=$(get_index_of 'library_built' "${ssf_header[@]}")+1
 
 poseidon_ids=()
 library_ids=()
-let missing_fastq_count=0
+let missing_data_count=0
+let bam_used_count=0
 
 while read line; do
   poseidon_id=$(echo "${line}" | awk -F "\t" -v X=${pid_col} '{print $X}')
   lib_name=$(echo "${line}" | awk -F "\t" -v X=${lib_name_col} '{print $X}')
   fastq_fn=$(echo "${line}" | awk -F "\t" -v X=${fastq_col} '{print $X}')
+  bam_fn=$(echo "${line}" | awk -F "\t" -v X=${bam_col} '{print $X}')
   library_built_field=$(echo "${line}" | awk -F "\t" -v X=${lib_built_col} '{print $X}')
   library_built=$(infer_library_strandedness ${library_built_field} 0)
 
   ## If there is no FastQ file for this entry, skip it.
-  if [[ -z ${fastq_fn} ]]; then
-    ## Count the number of entries without a FastQ file
-    let missing_fastq_count+=1
+  if [[ ( -z ${fastq_fn} || ${fastq_fn} == "n/a" ) && ( -z ${bam_fn} || ${bam_fn} == "n/a" ) ]]; then
+    ## Count the number of entries with neither a FastQ or a BAM file
+    let missing_data_count+=1
     continue
   fi
 
@@ -92,28 +95,41 @@ while read line; do
     row_lib_id="${row_pid}_${lib_name}${strandedness_suffix}" ## paste poseidon ID with Library ID to ensure unique naming of library results (both with suffix)
     let lane=$(count_instances ${row_lib_id} "${library_ids[@]}")+1
     
+    ## If there is a FastQ file, create a symlink to it.
+    if [[ ! -z ${fastq_fn}  && ${fastq_fn} != "n/a" ]]; then
+      read -r seq_type r1 r1_target r2 r2_target < <(symlink_names_from_ena_fastq ${download_dir} ${symlink_dir} ${row_lib_id}_L${lane} ${fastq_fn})
 
-    read -r seq_type r1 r1_target r2 r2_target < <(symlink_names_from_ena_fastq ${download_dir} ${symlink_dir} ${row_lib_id}_L${lane} ${fastq_fn})
+      ## Symink downloaded data to new naming to allow for multiple poseidon IDs per fastq.
+      ## All symlinks are recreated if already existing
+      if [[ ${seq_type} == 'SE' ]]; then
+        ln -vfs ${r1} ${r1_target}
+      elif [[ ${seq_type} == 'PE' ]]; then
+        ln -vfs ${r1} ${r1_target}
+        ln -vfs ${r2} ${r2_target}
+      fi
 
-    ## Symink downloaded data to new naming to allow for multiple poseidon IDs per fastq.
-    ## All symlinks are recreated if already existing
-    if [[ ${seq_type} == 'SE' ]]; then
-      ln -vfs ${r1} ${r1_target}
-    elif [[ ${seq_type} == 'PE' ]]; then
-      ln -vfs ${r1} ${r1_target}
-      ln -vfs ${r2} ${r2_target}
+    ## If no FastQ exists, but a BAM does, create a symlink to that instead.
+    elif [[ ! -z ${bam_fn} && ${bam_fn} != "n/a" ]]; then
+      let bam_used_count+=1
+      ## If there is a BAM file, create a symlink to it.
+      bam_target="${symlink_dir}/${row_lib_id}_L${lane}.bam"
+      ln -vfs ${download_dir}/$(basename ${bam_fn}) ${bam_target}
     fi
 
     ## Keep track of observed values
     poseidon_ids+=(${row_pid})
     library_ids+=(${row_lib_id})
   done
-
 done < <(tail -n +2 ${ssf_file})
 
 ## If there are missing FastQ files, warn the user.
-if [[ ${missing_fastq_count} -gt 0 ]]; then
-  errecho -y "${script_debug_string} There are ${missing_fastq_count} entries in the SSF file without a FastQ file.\n\tThese entries have been ignored."
+if [[ ${missing_data_count} -gt 0 ]]; then
+  errecho -y "${script_debug_string} There are ${missing_data_count} entries in the SSF file with neither a FastQ or a BAM file.\n\tThese entries have been ignored."
+fi
+
+## Report the number of entries where the bams are processed instead of fastqs
+if [[ ${bam_used_count} -gt 0 ]]; then
+  errecho -y "${script_debug_string} There are ${bam_used_count} entries in the SSF file with a BAM file but no FastQ file.\n\tThese entries have been symlinked to the BAM file instead."
 fi
 
 ## Keep track of versions

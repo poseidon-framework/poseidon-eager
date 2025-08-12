@@ -9,6 +9,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `populate_janno.py`:
   - Adjusted to use `sample_accession` when `secondary_sample_accession` is not `"n/a"`. This is important for data pulled from the GSA.
+- `Minotaur.config` -> `1.0.0`:
+  - New `custom_minotaur_config_version` and `custom_minotaur_config_base` params, to allow integration with the [minotaur-institutional-configs](https://github.com/poseidon-framework/minotaur-institutional-configs) repository.
 
 ### `Fixed`
 
@@ -20,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### `Deprecated`
 
 - Removed `packages/` directory, which included an early version of what has become the minotaur-recipes repository.
+- Removed `conf/EVA_cluster.config`. Cluster configurations are now in the [minotaur-institutional-configs](https://github.com/poseidon-framework/minotaur-institutional-configs) repository.
 
 ## v0.5.0 - 06/05/2025 (mapdamage added on 05/11/2024)
 

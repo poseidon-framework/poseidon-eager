@@ -7,7 +7,7 @@ import argparse
 import os
 import wget
 
-VERSION = "0.5.0"
+VERSION = "0.5.2"
 
 parser = argparse.ArgumentParser(
     prog="download_ena_data",
@@ -41,7 +41,7 @@ parser.add_argument("-v", "--version", action="version", version=VERSION)
 def read_ena_table(file_name):
     l = file_name.readlines()
     headers = l[0].split()
-    return map(lambda row: dict(zip(headers, row.split("\t"))), l[1:])
+    return map(lambda row: dict(zip(headers, row.strip().split("\t"))), l[1:])
 
 
 def read_versions_fn(file_name):
@@ -79,7 +79,8 @@ for root, dirs, files in os.walk(os.path.join(args.ssf_dir)):
                     line_count += 1
                     download_url = ena_entry["fastq_ftp"]
                     download_md5 = ena_entry["fastq_md5"]
-                    if download_url == "" and ena_entry["submitted_ftp"] != "":
+                    ## If there is no fastq_ftp entry, check for submitted_ftp
+                    if download_url in ["", "n/a"] and ena_entry["submitted_ftp"] != "":
                         run_accession = ena_entry["run_accession"]
                         download_url = ena_entry["submitted_ftp"]
                         download_md5 = ena_entry["submitted_md5"]
@@ -87,7 +88,8 @@ for root, dirs, files in os.walk(os.path.join(args.ssf_dir)):
                             f"[download_ena_data.py]: No 'fastq_ftp' entry found for {run_accession} @ line {line_count}. Downloading 'submitted_ftp' instead: {download_url}",
                             file=sys.stderr,
                         )
-                    elif download_url == "":
+                    ## If there is both fastq_ftp and submitted_ftp entry are empty, skip the row
+                    elif download_url in ["", "n/a"]:
                         run_accession = ena_entry["run_accession"]
                         print(
                             f"[download_ena_data.py]: No 'fastq_ftp' or 'submitted_ftp' entry found for {run_accession} @ line {line_count}. Skipping",
@@ -95,7 +97,7 @@ for root, dirs, files in os.walk(os.path.join(args.ssf_dir)):
                         )
                         continue
                     ## If there are multiple fastq files, prepare to download them all
-                    elif download_url.__contains__(";"):
+                    if download_url.__contains__(";"):
                         fastq_urls = download_url.split(";")
                         fastq_md5s = download_md5.split(";")
                     ## If there is only one fastq file, prepare to download it

@@ -11,6 +11,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - Adjusted to use `sample_accession` when `secondary_sample_accession` is not `"n/a"`. This is important for data pulled from the GSA.
 - `Minotaur.config` -> `1.0.0`:
   - New `custom_minotaur_config_version` and `custom_minotaur_config_base` params, to allow integration with the [minotaur-institutional-configs](https://github.com/poseidon-framework/minotaur-institutional-configs) repository.
+- `run_eager.sh`:
+  - Added `-p/--profile` option to specify the Nextflow profiles to use for Minotaur runs. This allows for more flexibility in running Minotaur with different configurations.
 
 ### `Fixed`
 

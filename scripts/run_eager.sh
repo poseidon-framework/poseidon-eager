@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 set -uo pipefail
 
-VERSION='0.5.0'
+VERSION='1.0.0'
 
-TEMP=`getopt -q -o hvadD --long help,version,test,array,dry_run,debug: -n 'run_eager.sh' -- "$@"`
+TEMP=`getopt -q -o hvp:,adD --long help,version,profile:,test,array,dry_run,debug: -n 'run_eager.sh' -- "$@"`
 eval set -- "$TEMP"
 
 ## DEBUG
@@ -17,7 +17,7 @@ function Helptext() {
     echo -ne "-h, --help \t\tPrint this text and exit.\n"
     echo -ne "-a, --array \t\tWhen provided, the nf-core/eager jobs will be submitted as an array job, using 'submit_as_array.sh'. 10 jobs will run concurrently.\n"
     echo -ne "-d, --dry_run \t\tPrint the commands to be run, but run nothing. Array files will still be created.\n"
-    echo -ne "-v, --version \t\tPrint qpWrapper version and exit.\n"
+    echo -ne "-v, --version \t\tPrint version and exit.\n"
 }
 
 ## Parameter defaults
@@ -26,6 +26,7 @@ temp_file=''
 with_tower=''
 dry_run="FALSE"
 debug="FALSE"
+nextflow_profiles='' ## Default profile to use for Minotaur runs. Can be overridden with -p <profile_name>.
 
 ## Read in CLI arguments
 while true ; do
@@ -35,11 +36,21 @@ while true ; do
         -v|--version) echo ${VERSION}; exit 0;;
         -a|--array) array="TRUE"; shift 1;;
         -D|--debug) debug="TRUE"; shift 1;;
+        -p|--profile) 
+            nextflow_profiles=${2}
+            shift 2 ;;
         --) break ;;
         *) echo -e "invalid option provided.\n"; Helptext; exit 1;;
     esac
 done
 
+## Check if a profile was provided.
+##   Unknown profiles will cause the nextflow run to fail.
+if [[ -z ${nextflow_profiles} ]]; then
+    echo "No profile provided. Use -p <profile_name> to set a profile."
+    echo "Example: -p eva,archgen,big_data,eva_minotaur,local_paths"
+    exit 1
+fi
 
 ## Hard-coded local paths to minotaur resources
 local_minotaur_recipes="/mnt/archgen/poseidon/minotaur/minotaur-recipes"
@@ -56,7 +67,6 @@ nxf_path="/mnt/archgen/tools/nextflow/22.04.5.5708/" ## Use centarlly installed 
 eager_version='2.5.1'
 root_eager_dir="${local_poseidon_eager}/eager/"
 root_package_dir="${local_minotaur_recipes}/packages/"
-nextflow_profiles="eva,archgen,big_data,eva_local_paths"
 tower_config="${local_poseidon_eager}/.nextflow_tower.conf" ## Optional tower.nf configuration
 array_temp_fn_dir="${local_poseidon_eager}/array_tempfiles"
 array_logs_dir="${local_poseidon_eager}/array_Logs"

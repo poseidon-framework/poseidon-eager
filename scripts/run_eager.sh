@@ -3,7 +3,7 @@ set -uo pipefail
 
 VERSION='1.0.0'
 
-TEMP=`getopt -q -o hvp:,adD --long help,version,profile:,test,array,dry_run,debug: -n 'run_eager.sh' -- "$@"`
+TEMP=`getopt -q -o hvp:adD --long help,version,profile:,test,array,dry_run,debug: -n 'run_eager.sh' -- "$@"`
 eval set -- "$TEMP"
 
 ## DEBUG

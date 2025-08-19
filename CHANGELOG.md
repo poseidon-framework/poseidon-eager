@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - New `custom_minotaur_config_version` and `custom_minotaur_config_base` params, to allow integration with the [minotaur-institutional-configs](https://github.com/poseidon-framework/minotaur-institutional-configs) repository.
 - `run_eager.sh`:
   - Added `-p/--profile` option to specify the Nextflow profiles to use for Minotaur runs. This allows for more flexibility in running Minotaur with different configurations.
+- `validate_downloaded_data.sh`: Fix validation of downloaded bam files.
 
 ### `Fixed`
 

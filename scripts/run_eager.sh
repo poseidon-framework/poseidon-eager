@@ -130,7 +130,7 @@ for eager_input in ${root_eager_dir}/*/*.finalised.tsv; do
         
         ## Debugging info.
         echo "Running eager on ${eager_input}:"
-        echo "${CMD}"
+        echo "cd $(dirname ${eager_input}) ; ${CMD}"
         
 
         ## Don't run comands if dry run specified.

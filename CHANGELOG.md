@@ -3,11 +3,11 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## v1.0.0 - 19/08/2025
+## v1.0.0 - 02/09/2025
 
 ### `Added`
 
-- `Minotaur.config` -> `1.0.0`:
+- `Minotaur.config` -> `1.0.4`:
   - New `custom_minotaur_config_version` and `custom_minotaur_config_base` params, to allow integration with the [minotaur-institutional-configs](https://github.com/poseidon-framework/minotaur-institutional-configs) repository.
 - `run_eager.sh`:
   - Added `-p/--profile` option to specify the Nextflow profiles to use for Minotaur runs. This allows for more flexibility in running Minotaur with different configurations.

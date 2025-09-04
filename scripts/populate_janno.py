@@ -10,7 +10,7 @@ import re
 import numpy as np
 from collections import namedtuple
 
-VERSION = "0.5.1"
+VERSION = "0.5.2"
 
 
 def get_eager_version(eager_result_dir):
@@ -610,7 +610,7 @@ summarised_stats = (
 summarised_stats = (
     compound_eager_table.groupby("Sample_Name")["endogenous"]
     .apply(
-        max,
+        np.maximum.reduce,
     )
     .reset_index("Sample_Name")
     .rename(columns={"endogenous": "Endogenous"})
@@ -643,6 +643,7 @@ filled_janno_table = janno_table.merge(
 )
 ## Replace columns in original janno with values in final_eager_table
 ## TODO-dev need to infer Genetic_Sex from 'RateX', 'RateY', 'RateErrX', 'RateErrY'
+## TODO: turn this to a dict with each colum having its type, so typing can be made explicit, then remove pd.set_option('future.no_silent_downcasting', True)
 for col in [
     "Nr_SNPs",
     "Damage",
@@ -658,9 +659,10 @@ for col in [
     "UDG",
     "Genetic_Source_Accession_IDs",
 ]:
-    filled_janno_table[col] = (
-        filled_janno_table[[col + "_x", col + "_y"]].bfill(axis=1).iloc[:, 0]
-    )
+    with pd.set_option('future.no_silent_downcasting', True):
+        filled_janno_table[col] = (
+            filled_janno_table[[col + "_x", col + "_y"]].bfill(axis=1).iloc[:, 0]
+        )
 
 ## Drop columns duplicated from merges, and columns that are not relevant anymore.
 filled_janno_table = filled_janno_table.drop(

@@ -384,7 +384,7 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
   head -n ${insert_after} ${tmp_dir}/package/POSEIDON.yml > ${tmp_dir}/package/tmp_POSEIDON.yml
   echo "  referenceGenomeAssembly: ${referenceAssembly}" >> ${tmp_dir}/package/tmp_POSEIDON.yml
   echo "  referenceGenomeAssemblyURL: ${referenceAssemblyURL}" >> ${tmp_dir}/package/tmp_POSEIDON.yml
-  tail -n +$((${insert_after}+1)) ${insert_after} ${tmp_dir}/package/POSEIDON.yml > ${tmp_dir}/package/tmp_POSEIDON.yml
+  tail -n +$((${insert_after}+1)) ${tmp_dir}/package/POSEIDON.yml >> ${tmp_dir}/package/tmp_POSEIDON.yml
   mv ${tmp_dir}/package/tmp_POSEIDON.yml ${tmp_dir}/package/POSEIDON.yml
 
   ## Add Thiseas as contributor to poseidon package

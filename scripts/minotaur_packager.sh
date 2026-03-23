@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-VERSION='0.5.0'
+VERSION='0.5.2'
 set -o pipefail ## Pipefail, complain on new unassigned variables.
 # set -x ## Debugging
 
@@ -128,6 +128,7 @@ function add_versions_file() {
   local capture_type_version_string
   local pipeline_report_fn
   local populate_janno_version
+  local trident_version
 
   ## Read in function params
   package_eager_result_dir=${1}
@@ -153,6 +154,7 @@ function add_versions_file() {
   config_version=$(grep "config_template_version" ${pipeline_report_fn} | awk -F ' ' '{print $NF}')
   package_config_version=$(grep "package_config_version" ${pipeline_report_fn} | awk -F ' ' '{print $NF}')
   populate_janno_version=$(${repo_dir}/scripts/populate_janno.py -v)
+  trident_version=$(trident --version 2>/dev/null)
 
   errecho -y "[${package_name}]: Writing version info to '${version_fn}'."
   ## Create the versions file. Flush any old file contents if the file exists.
@@ -168,6 +170,7 @@ function add_versions_file() {
   echo " - Package config version: ${package_config_version}"     >> ${version_fn}
   echo " - Minotaur-packager version: ${VERSION}"                 >> ${version_fn}
   echo " - populate_janno.py version: ${populate_janno_version}"  >> ${version_fn}
+  echo " - trident version for packaging: ${trident_version}"     >> ${version_fn}
 }
 
 ## Function to add SSF file to minotaur package
@@ -347,6 +350,11 @@ genotype_fns=($(ls -1 ${root_results_dir}/genotyping/*geno)) ## List of genotype
 snp_set="1240K"
 errecho -y "[${package_name}]: SNP set inferred as '${snp_set}'."
 
+## TODO-dev Currently hardcoded referenceAssembly info, but in the future maybe infer from genotype input names?
+referenceAssembly="GRCh37"
+referenceAssemblyURL="https://www.ncbi.nlm.nih.gov/datasets/genome/GCA_000001405.14"
+errecho -y "[${package_name}]: Genome assembly inferred as '${referenceAssembly}' with URL '${referenceAssemblyURL}'."
+
 ## Check that the inferred snp set is supported. Should trigger if the inference somehow breaks.
 supported_snpsets=($(ls -1 ${repo_dir}/conf/CaptureType_profiles/ | cut -d "." -f 1))
 if [[ ! -z $(all_x_in_y 1 ${snp_set} ${#supported_snpsets[@]} ${supported_snpsets[@]}) ]]; then
@@ -368,6 +376,16 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
   ## Create a new package with the given genotypes.
   trident init -p ${tmp_dir}/${package_name}.geno -o ${tmp_dir}/package/ -n ${package_name} --snpSet ${snp_set}
   check_fail $? "[${package_name}]: Failed to initialise package. Aborting."
+
+  ## To be replaced once trident init can do this natively.
+  ## First infer the line number tha includes the snpSet. Then add the reference assembly info underneath that line, then the rest of the yml file.
+  errecho -y "[${package_name}]: Adding reference genome assembly information."
+  insert_after=$(grep -n "snpSet" ${tmp_dir}/package/POSEIDON.yml | cut -d ':' -f 1)
+  head -n ${insert_after} ${tmp_dir}/package/POSEIDON.yml > ${tmp_dir}/package/tmp_POSEIDON.yml
+  echo "  referenceGenomeAssembly: ${referenceAssembly}" >> ${tmp_dir}/package/tmp_POSEIDON.yml
+  echo "  referenceGenomeAssemblyURL: ${referenceAssemblyURL}" >> ${tmp_dir}/package/tmp_POSEIDON.yml
+  tail -n +$((${insert_after}+1)) ${tmp_dir}/package/POSEIDON.yml >> ${tmp_dir}/package/tmp_POSEIDON.yml
+  mv ${tmp_dir}/package/tmp_POSEIDON.yml ${tmp_dir}/package/POSEIDON.yml
 
   ## Add Thiseas as contributor to poseidon package
   ##  Trident 1.5.* does not include Josiah Carberry anymore, which breaks pyJanno if the field is empty.

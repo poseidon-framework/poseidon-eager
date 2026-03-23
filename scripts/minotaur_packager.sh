@@ -353,6 +353,7 @@ errecho -y "[${package_name}]: SNP set inferred as '${snp_set}'."
 ## TODO-dev Currently hardcoded referenceAssembly info, but in the future maybe infer from genotype input names?
 referenceAssembly="GRCh37"
 referenceAssemblyURL="https://www.ncbi.nlm.nih.gov/datasets/genome/GCA_000001405.14"
+errecho -y "[${package_name}]: Genome assembly inferred as '${referenceAssembly}' with URL '${referenceAssemblyURL}'."
 
 ## Check that the inferred snp set is supported. Should trigger if the inference somehow breaks.
 supported_snpsets=($(ls -1 ${repo_dir}/conf/CaptureType_profiles/ | cut -d "." -f 1))

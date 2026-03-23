@@ -272,9 +272,9 @@ ssf_table = pd.read_table(args.ssf_path, dtype=str)
 ## Read poseidon yaml, infer path to janno file and read janno file.
 poseidon_yaml_data = PoseidonYaml(args.poseidon_yml_path)
 janno_table = pd.read_table(poseidon_yaml_data.janno_file, dtype=str)
-## Add Main_ID to janno table. That is the Poseidon_ID after removing minotaur processing related suffixes.
+## Add Individual_ID to janno table. That is the Poseidon_ID after removing minotaur processing related suffixes.
 janno_table["Eager_ID"] = janno_table["Poseidon_ID"].str.replace(r"_MNT", "")
-janno_table["Main_ID"] = janno_table["Eager_ID"].str.replace(r"_ss", "")
+janno_table["Individual_ID"] = janno_table["Eager_ID"].str.replace(r"_ss", "")
 
 ## Prepare damage table for joining. Infer eager Library_ID from id column, by removing '_rmdup.bam' suffix
 ## The "_rmdup" is removed separately to also apply to mapdamage results (which lack the .bam suffix)
@@ -684,7 +684,7 @@ final_column_order = [
     "Genetic_Sex",
     "Group_Name",
     "Alternative_IDs",
-    "Main_ID",  ## Added
+    "Individual_ID",  ## Added
     "Relation_To",
     "Relation_Degree",
     "Relation_Type",

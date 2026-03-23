@@ -385,6 +385,7 @@ elif [[ ! -d ${output_package_dir} ]] || [[ ${newest_genotype_fn} -nt ${output_p
   echo "  referenceGenomeAssembly: ${referenceAssembly}" >> ${tmp_dir}/package/tmp_POSEIDON.yml
   echo "  referenceGenomeAssemblyURL: ${referenceAssemblyURL}" >> ${tmp_dir}/package/tmp_POSEIDON.yml
   tail -n +$((${insert_after}+1)) ${insert_after} ${tmp_dir}/package/POSEIDON.yml > ${tmp_dir}/package/tmp_POSEIDON.yml
+  mv ${tmp_dir}/package/tmp_POSEIDON.yml ${tmp_dir}/package/POSEIDON.yml
 
   ## Add Thiseas as contributor to poseidon package
   ##  Trident 1.5.* does not include Josiah Carberry anymore, which breaks pyJanno if the field is empty.

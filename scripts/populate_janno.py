@@ -659,7 +659,7 @@ for col in [
     "UDG",
     "Genetic_Source_Accession_IDs",
 ]:
-    with pd.set_option('future.no_silent_downcasting', True):
+    with pd.option_context("future.no_silent_downcasting", True):
         filled_janno_table[col] = (
             filled_janno_table[[col + "_x", col + "_y"]].bfill(axis=1).iloc[:, 0]
         )
@@ -706,7 +706,7 @@ final_column_order = [
     "Date_Note",
     "MT_Haplogroup",
     "Y_Haplogroup",
-    "Source_Tissue",
+    "Source_Material",
     "Nr_Libraries",
     "Library_Names",
     "Capture_Type",
